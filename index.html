@@ -143,9 +143,9 @@
 
   // Look settings. Exposed on window.thumb so scripts/render.mjs uses the exact same values.
   const config = {
-    motion: 1,      // how strongly the colour ribbons flow
-    light: 1,       // strength of the drifting white light
-    vivid: 1.3,     // colour saturation (1 = colours as sampled)
+    motion: 1,      // how far the colour clouds travel
+    light: 1,       // strength of the drifting white haze
+    vivid: 1.0,     // colour saturation (1 = colours as sampled)
     duration: 6,    // seconds per seamless loop
     fps: 60,
     scale: 2,
@@ -189,22 +189,17 @@
       return d;
     }
 
-    // Colour ramp along the ribbons, sampled from the reference gradient.
-    // Each stop eases into the next, so neighbouring bands melt together.
-    vec3 ramp(float v) {
-      vec3 c = vec3(255.0, 201.0, 187.0);                                // peach
-      c = mix(c, vec3(254.0, 169.0, 187.0), smoothstep(0.00, 0.14, v)); // soft pink
-      c = mix(c, vec3(253.0, 140.0, 190.0), smoothstep(0.14, 0.28, v)); // hot pink
-      c = mix(c, vec3(222.0, 128.0, 220.0), smoothstep(0.28, 0.42, v)); // magenta
-      c = mix(c, vec3(213.0, 152.0, 229.0), smoothstep(0.42, 0.55, v)); // lilac
-      c = mix(c, vec3(203.0, 193.0, 240.0), smoothstep(0.55, 0.78, v)); // lavender
-      c = mix(c, vec3(207.0, 218.0, 246.0), smoothstep(0.86, 1.00, v)); // light blue
-      return c / 255.0;
-    }
-
-    float glow(vec2 q, vec2 c, float r) {
+    // Soft colour clouds. Each one travels on its own closed loop (f = whole
+    // laps per loop, negative = the other way round) and they are averaged
+    // with wide, overlapping weights, so neighbours melt into each other.
+    vec3 acc = vec3(0.0);
+    float wsum = 0.0;
+    void cloud(vec2 q, vec3 rgb, vec2 home, vec2 amp, float f, float off, float r, float strength, float th) {
+      vec2 c = home + 1.4 * uMotion * amp * vec2(cos(f * th + off), sin(f * th + off * 1.7));
       vec2 d = q - c;
-      return exp(-dot(d, d) / (r * r));
+      float w = strength * exp(-dot(d, d) / (r * r));
+      acc += w * rgb / 255.0;
+      wsum += w;
     }
 
     float hash(vec2 p) {
@@ -215,48 +210,43 @@
       vec2 p = vUv;
       float th = TAU * uPhase;
       vec2 q = (p - 0.5) * vec2(uAspect, 1.0);   // centred; frame is 1.2 wide, 1 tall
-      // Two-level domain warp turns straight bands into slow, silky folds.
-      vec2 qw = q + 0.16 * uMotion * flow(q, th);
-      qw += 0.10 * uMotion * flow(1.3 * qw + 2.0, th + 1.7);
+      // Shared flow: every cloud, white included, is bent by the same field,
+      // so the whole surface moves as one.
+      vec2 qw = q + 0.10 * uMotion * flow(q, th);
+      qw += 0.06 * uMotion * flow(1.3 * qw + 2.0, th + 1.7);
 
-      // Position along the ramp: a diagonal from peach (bottom left) to blue
-      // (top right), plus travelling ripples that make the bands undulate.
-      float ripple = 0.10 * sin(3.0 * qw.y + 2.2 * qw.x + th)
-                   + 0.06 * sin(5.0 * qw.x - 3.6 * qw.y - 2.0 * th + 1.0);
-      float v = 0.52 + 0.62 * dot(qw, normalize(vec2(1.0, -0.8))) + ripple;
+      // A faint pale-lilac base keeps far-from-everything areas soft.
+      acc = 0.12 * vec3(246.0, 240.0, 252.0) / 255.0;
+      wsum = 0.12;
 
-      vec3 col = ramp(v);
+      // Colours sampled from the reference: pinks on the left, mauve in the
+      // middle, lilac and lavender to the right, pale blue at the top right.
+      cloud(qw, vec3(255.0, 139.0, 192.0), vec2(-0.22, -0.12), vec2(0.16, 0.12),  1.0, 0.0, 0.34, 1.0, th); // pink
+      cloud(qw, vec3(255.0, 169.0, 214.0), vec2(-0.46, -0.40), vec2(0.12, 0.10), -1.0, 1.2, 0.34, 1.0, th); // light pink
+      cloud(qw, vec3(255.0, 178.0, 192.0), vec2(-0.44,  0.38), vec2(0.14, 0.10),  1.0, 2.5, 0.34, 1.0, th); // blush
+      cloud(qw, vec3(205.0, 151.0, 209.0), vec2( 0.06,  0.26), vec2(0.18, 0.12), -1.0, 3.6, 0.34, 1.0, th); // mauve
+      cloud(qw, vec3(206.0, 165.0, 231.0), vec2( 0.46,  0.40), vec2(0.14, 0.10),  1.0, 0.8, 0.34, 1.0, th); // lilac
+      cloud(qw, vec3(203.0, 195.0, 241.0), vec2( 0.52, -0.02), vec2(0.10, 0.16), -1.0, 5.0, 0.34, 1.0, th); // lavender
+      cloud(qw, vec3(218.0, 233.0, 251.0), vec2( 0.40, -0.42), vec2(0.14, 0.10),  1.0, 4.4, 0.34, 1.0, th); // pale blue
 
-      // White ribbon: a soft band running from above the right-hand logo to the
-      // bottom-left corner. It lives in the same warped space and carries the
-      // same ripples as the colour bands, so it folds and drifts with them.
-      float x = dot(qw, normalize(vec2(0.95, 1.0))) - 0.8 * ripple
-              - 0.06 * uMotion * sin(th + 0.4);
-      float silk = 0.48 * exp(-x * x / (0.13 * 0.13)) + 0.26 * exp(-x * x / (0.28 * 0.28));
-      col = mix(col, vec3(250.0, 243.0, 253.0) / 255.0, clamp(silk * uLight, 0.0, 1.0));
+      // White haze: two clouds on wide loops that wander across the whole frame.
+      cloud(qw, vec3(255.0, 247.0, 251.0), vec2(0.0, 0.0), vec2(0.50, 0.32),  1.0, 0.9, 0.25, 0.85 * uLight, th);
+      cloud(qw, vec3(246.0, 246.0, 254.0), vec2(0.0, 0.0), vec2(0.46, 0.34), -1.0, 4.0, 0.23, 0.75 * uLight, th);
 
-      // Behind the logos, the brightest bands (white, peach) fade towards lilac
-      // in a wide soft oval, so the white text always reads. The ribbons keep
-      // their shape; only their brightness eases off near the text.
+      vec3 col = acc / wsum;
+
+      // Behind the logos the brightest areas ease slightly towards mauve in a
+      // wide soft oval, so the white text always reads.
       vec2 boxC = 0.5 * (uTextBox.xy + uTextBox.zw);
       vec2 boxR = 0.5 * (uTextBox.zw - uTextBox.xy) + vec2(0.08, 0.16);
       vec2 e = (p - boxC) / boxR;
       float guard = exp(-dot(e, e));
-      float bright = smoothstep(0.78, 0.96, dot(col, vec3(0.299, 0.587, 0.114)));
-      col = mix(col, ramp(0.47), 0.45 * guard * bright);
+      float bright = smoothstep(0.80, 0.96, dot(col, vec3(0.299, 0.587, 0.114)));
+      col = mix(col, vec3(205.0, 151.0, 209.0) / 255.0, 0.40 * guard * bright);
 
-      // Vividness: push saturation away from grey.
+      // Vividness: 1 = colours as sampled.
       float luma = dot(col, vec3(0.299, 0.587, 0.114));
       col = clamp(mix(vec3(luma), col, uVivid), 0.0, 1.0);
-
-      // Soft white light: two diffuse glows on looping paths, bent by the same
-      // flow. One drifts through the upper half and one through the lower half
-      // so they mostly travel around the logos.
-      vec2 c1 = vec2(0.44 * uAspect * cos(th + 2.4), -0.25 + 0.11 * sin(2.0 * th + 0.4));
-      vec2 c2 = vec2(0.40 * uAspect * cos(-th + 0.3), 0.26 + 0.10 * sin(-2.0 * th + 2.2));
-      float L = 0.18 * glow(qw, c1, 0.30) + 0.13 * glow(qw, c2, 0.26);
-      L = clamp(L * uLight * (1.0 - 0.7 * guard), 0.0, 1.0);
-      col = 1.0 - (1.0 - col) * (1.0 - L);    // screen blend with white
 
       // Text layer: white with alpha.
       float a = texture2D(uText, p).a;

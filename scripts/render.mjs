@@ -16,7 +16,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'exports');
 
 const args = process.argv.slice(2);
-const opts = { scale: 2, duration: 6, fps: 60, motion: 1, light: 1, vivid: 1.3, crf: 12 };
+const opts = { scale: 2, duration: 6, fps: 60, motion: 1, light: 1, vivid: 1.0, crf: 12 };
 const names = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i].startsWith('--')) opts[args[i].slice(2)] = Number(args[++i]);

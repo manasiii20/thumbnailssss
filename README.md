@@ -1,6 +1,6 @@
 # Thumbnail Studio
 
-Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, silky bands of peach, pink, magenta, lilac, lavender and blue fold and ripple in a seamless loop. A soft white ribbon runs from the top right to the bottom-left corner and drifts and folds along with the colours.
+Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, soft clouds of pink, blush, mauve, lilac, lavender and pale blue drift and melt into each other in a seamless loop. Patches of white haze wander across the whole frame with them.
 
 ## Ready-made exports
 
@@ -14,7 +14,7 @@ Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, si
 
 Open `index.html` in Chrome, Edge or Safari 17+. It works straight from disk, so you don't need a server.
 
-- **Motion** sets how strongly the ribbons flow, **Vividness** sets colour saturation, and **White light** sets the strength of the glow.
+- **Motion** sets how far the colour clouds travel, **Vividness** sets colour saturation (1.00 = the reference colours), and **White light** sets how strong the white haze is.
 - **Loop**, **FPS** and **Export size** control the video.
 - **Export MP4 loop** renders the video frame by frame and downloads it. The last frame leads back into the first, so it loops seamlessly.
 - **Export first frame as PNG** saves a still that matches the start of the video.
@@ -25,7 +25,7 @@ Open `index.html` in Chrome, Edge or Safari 17+. It works straight from disk, so
 2. Export it as **PNG @2x** (964 × 804).
 3. Either click **Load text PNG** in the studio, or save it to `assets/overlays/<name>.png` and run `node scripts/embed-assets.mjs` so it shows up in the dropdown.
 
-The ribbon colours are set in `ramp()` in the shader in `index.html`.
+The cloud colours and where they sit are set in the `cloud(...)` lines of the shader in `index.html`.
 
 ## Command-line render (optional)
 
@@ -44,5 +44,5 @@ The output is H.264 High, yuv420p, tagged BT.709, with faststart. It plays in br
 ## How it's built
 
 - `assets/overlays/hitachi-x-bosch.png` is the text layer pulled from the reference thumbnail as white plus alpha, so the logos match it pixel for pixel.
-- The background is a WebGL shader in `index.html`. A smooth field runs diagonally from peach (bottom left) to blue (top right), with travelling ripples on top. A two-level flow field folds it into silky ribbons. The field is coloured through a ramp of colours sampled from the reference gradient. On top, a soft white ribbon runs corner to corner. It lives in the same warped space and carries the same ripples as the colour bands, so it moves with them. **White light** controls its strength. Near the logos, the brightest bands ease towards lilac in a soft oval, so the white text always reads. The oval is found automatically from each text layer. Two soft white glows drift through the upper and lower halves. Time only enters as whole turns of the loop, so the loop has no seam.
+- The background is a WebGL shader in `index.html`. Seven colour clouds, with colours sampled from the reference gradient, each travel on their own closed loop. Two white clouds take wide loops across the whole frame. All of them are averaged with wide, overlapping weights and bent by one shared flow field, so they melt together and move as one surface. Near the logos, the brightest areas ease slightly towards mauve in a soft oval, so the white text always reads. The oval is found automatically from each text layer. Time only enters as whole turns of the loop, so the loop has no seam.
 - `vendor/mp4-muxer.js` (MIT) writes the MP4 container for in-browser export.
