@@ -1,6 +1,6 @@
 # Thumbnail Studio
 
-Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, silky ribbons of peach, pink, magenta, lilac, milky white, lavender and blue fold and ripple in a seamless loop, with a soft white light moving through.
+Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, silky bands of peach, pink, magenta, lilac, lavender and blue fold and ripple in a seamless loop. A white silk ribbon runs from the top right to the bottom-left corner and sweeps back and forth across the frame.
 
 ## Ready-made exports
 
@@ -44,5 +44,5 @@ The output is H.264 High, yuv420p, tagged BT.709, with faststart. It plays in br
 ## How it's built
 
 - `assets/overlays/hitachi-x-bosch.png` is the text layer pulled from the reference thumbnail as white plus alpha, so the logos match it pixel for pixel.
-- The background is a WebGL shader in `index.html`. A smooth field runs diagonally from peach (bottom left) to blue (top right), with travelling ripples on top. A two-level flow field folds it into silky ribbons. The field is coloured through a ramp of colours sampled from the reference gradient. Near the logos, the brightest bands ease towards lilac in a soft oval, so the white text always reads. The oval is found automatically from each text layer. Two soft white glows drift through the upper and lower halves. Time only enters as whole turns of the loop, so the loop has no seam.
+- The background is a WebGL shader in `index.html`. A smooth field runs diagonally from peach (bottom left) to blue (top right), with travelling ripples on top. A two-level flow field folds it into silky ribbons. The field is coloured through a ramp of colours sampled from the reference gradient. On top, a white silk ribbon runs corner to corner, folded by its own flow and sweeping across the frame once per loop. **White light** controls its strength. Near the logos, the brightest bands ease towards lilac in a soft oval, so the white text always reads. The oval is found automatically from each text layer. Two soft white glows drift through the upper and lower halves. Time only enters as whole turns of the loop, so the loop has no seam.
 - `vendor/mp4-muxer.js` (MIT) writes the MP4 container for in-browser export.
