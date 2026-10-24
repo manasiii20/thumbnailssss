@@ -1,6 +1,6 @@
 # Thumbnail Studio
 
-Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, pink, peach, mauve, magenta and blue colour fields drift and blend in a seamless loop, with a soft white light moving through.
+Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, silky ribbons of peach, pink, magenta, lilac, milky white, lavender and blue fold and ripple in a seamless loop, with a soft white light moving through.
 
 ## Ready-made exports
 
@@ -14,7 +14,7 @@ Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, pi
 
 Open `index.html` in Chrome, Edge or Safari 17+. It works straight from disk, so you don't need a server.
 
-- **Motion** sets how far the colours travel, **Vividness** sets colour saturation, and **White light** sets the strength of the glow.
+- **Motion** sets how strongly the ribbons flow, **Vividness** sets colour saturation, and **White light** sets the strength of the glow.
 - **Loop**, **FPS** and **Export size** control the video.
 - **Export MP4 loop** renders the video frame by frame and downloads it. The last frame leads back into the first, so it loops seamlessly.
 - **Export first frame as PNG** saves a still that matches the start of the video.
@@ -25,7 +25,7 @@ Open `index.html` in Chrome, Edge or Safari 17+. It works straight from disk, so
 2. Export it as **PNG @2x** (964 × 804).
 3. Either click **Load text PNG** in the studio, or save it to `assets/overlays/<name>.png` and run `node scripts/embed-assets.mjs` so it shows up in the dropdown.
 
-The gradient colours and where they sit are set in the `blob(...)` lines of the shader in `index.html`.
+The ribbon colours are set in `ramp()` in the shader in `index.html`.
 
 ## Command-line render (optional)
 
@@ -44,5 +44,5 @@ The output is H.264 High, yuv420p, tagged BT.709, with faststart. It plays in br
 ## How it's built
 
 - `assets/overlays/hitachi-x-bosch.png` is the text layer pulled from the reference thumbnail as white plus alpha, so the logos match it pixel for pixel.
-- The background is a WebGL shader in `index.html`. Eight colour blobs, with colours sampled from the reference gradient, each travel on their own closed loop and blend smoothly. A flow field bends them into organic shapes. Two soft white glows move on looping paths, one in the upper half and one in the lower, so they mostly pass around the logos. Time only enters as whole turns of the loop, so the loop has no seam.
+- The background is a WebGL shader in `index.html`. A smooth field runs diagonally from peach (bottom left) to blue (top right), with travelling ripples on top. A two-level flow field folds it into silky ribbons. The field is coloured through a ramp of colours sampled from the reference gradient. Near the logos, the brightest bands ease towards lilac in a soft oval, so the white text always reads. The oval is found automatically from each text layer. Two soft white glows drift through the upper and lower halves. Time only enters as whole turns of the loop, so the loop has no seam.
 - `vendor/mp4-muxer.js` (MIT) writes the MP4 container for in-browser export.
