@@ -143,7 +143,7 @@
 
   // Look settings. Exposed on window.thumb so scripts/render.mjs uses the exact same values.
   const config = {
-    motion: 1,      // how far the colour clouds travel
+    motion: 1,      // how strongly the colours flow and fold
     light: 1,       // strength of the drifting white haze
     vivid: 1.0,     // colour saturation (1 = colours as sampled)
     duration: 6,    // seconds per seamless loop
@@ -189,17 +189,18 @@
       return d;
     }
 
-    // Soft colour clouds. Each one travels on its own closed loop (f = whole
-    // laps per loop, negative = the other way round) and they are averaged
-    // with wide, overlapping weights, so neighbours melt into each other.
-    vec3 acc = vec3(0.0);
-    float wsum = 0.0;
-    void cloud(vec2 q, vec3 rgb, vec2 home, vec2 amp, float f, float off, float r, float strength, float th) {
-      vec2 c = home + 1.4 * uMotion * amp * vec2(cos(f * th + off), sin(f * th + off * 1.7));
-      vec2 d = q - c;
-      float w = strength * exp(-dot(d, d) / (r * r * 0.55));   // narrower overlap keeps each colour distinct
-      acc += w * rgb / 255.0;
-      wsum += w;
+    // Colour ramp across the flowing field, sampled from the reference
+    // gradient: blush and pinks, then mauve and lilac, then lavender and pale
+    // blue. Each stop eases into the next, so neighbouring colours melt together.
+    vec3 ramp(float v) {
+      vec3 c = vec3(255.0, 186.0, 196.0);                                // blush
+      c = mix(c, vec3(255.0, 139.0, 192.0), smoothstep(0.00, 0.16, v)); // pink
+      c = mix(c, vec3(255.0, 169.0, 214.0), smoothstep(0.16, 0.30, v)); // light pink
+      c = mix(c, vec3(205.0, 151.0, 209.0), smoothstep(0.30, 0.42, v)); // mauve
+      c = mix(c, vec3(206.0, 165.0, 231.0), smoothstep(0.42, 0.52, v)); // lilac
+      c = mix(c, vec3(203.0, 195.0, 241.0), smoothstep(0.52, 0.66, v)); // lavender
+      c = mix(c, vec3(218.0, 233.0, 251.0), smoothstep(0.66, 0.84, v)); // pale blue
+      return c / 255.0;
     }
 
     float hash(vec2 p) {
@@ -210,30 +211,25 @@
       vec2 p = vUv;
       float th = TAU * uPhase;
       vec2 q = (p - 0.5) * vec2(uAspect, 1.0);   // centred; frame is 1.2 wide, 1 tall
-      // Shared flow: every cloud, white included, is bent by the same field,
-      // so the whole surface moves as one.
-      vec2 qw = q + 0.10 * uMotion * flow(q, th);
-      qw += 0.06 * uMotion * flow(1.3 * qw + 2.0, th + 1.7);
+      // Two-level domain warp folds the colours into each other, so the
+      // shapes keep changing instead of sliding around.
+      vec2 qw = q + 0.16 * uMotion * flow(q, th);
+      qw += 0.10 * uMotion * flow(1.3 * qw + 2.0, th + 1.7);
 
-      // A faint pale-lilac base keeps far-from-everything areas soft.
-      acc = 0.03 * vec3(246.0, 240.0, 252.0) / 255.0;
-      wsum = 0.03;
+      // Position along the ramp: a diagonal from blush (bottom left) to pale
+      // blue (top right), plus travelling ripples that make the colours undulate.
+      float v = 0.52 + 0.62 * dot(qw, normalize(vec2(1.0, -0.8)));
+      v += 0.10 * sin(3.0 * qw.y + 2.2 * qw.x + th);
+      v += 0.06 * sin(5.0 * qw.x - 3.6 * qw.y - 2.0 * th + 1.0);
+      vec3 col = ramp(v);
 
-      // Colours sampled from the reference: pinks on the left, mauve in the
-      // middle, lilac and lavender to the right, pale blue at the top right.
-      cloud(qw, vec3(255.0, 139.0, 192.0), vec2(-0.22, -0.12), vec2(0.16, 0.12),  1.0, 0.0, 0.34, 1.0, th); // pink
-      cloud(qw, vec3(255.0, 169.0, 214.0), vec2(-0.46, -0.40), vec2(0.12, 0.10), -1.0, 1.2, 0.34, 1.0, th); // light pink
-      cloud(qw, vec3(255.0, 178.0, 192.0), vec2(-0.44,  0.38), vec2(0.14, 0.10),  1.0, 2.5, 0.34, 1.0, th); // blush
-      cloud(qw, vec3(205.0, 151.0, 209.0), vec2( 0.06,  0.26), vec2(0.18, 0.12), -1.0, 3.6, 0.34, 1.0, th); // mauve
-      cloud(qw, vec3(206.0, 165.0, 231.0), vec2( 0.46,  0.40), vec2(0.14, 0.10),  1.0, 0.8, 0.34, 1.0, th); // lilac
-      cloud(qw, vec3(203.0, 195.0, 241.0), vec2( 0.52, -0.02), vec2(0.10, 0.16), -1.0, 5.0, 0.34, 1.0, th); // lavender
-      cloud(qw, vec3(218.0, 233.0, 251.0), vec2( 0.40, -0.42), vec2(0.14, 0.10),  1.0, 4.4, 0.34, 1.0, th); // pale blue
-
-      // White haze: two clouds on wide loops that wander across the whole frame.
-      cloud(qw, vec3(255.0, 247.0, 251.0), vec2(0.0, 0.0), vec2(0.50, 0.32),  1.0, 0.9, 0.25, 0.85 * uLight, th);
-      cloud(qw, vec3(246.0, 246.0, 254.0), vec2(0.0, 0.0), vec2(0.46, 0.34), -1.0, 4.0, 0.23, 0.75 * uLight, th);
-
-      vec3 col = acc / wsum;
+      // White haze: soft patches that swell and dissolve inside the same
+      // warped space, so the white mixes in with the colours as they fold.
+      vec2 qh = qw + 0.22 * uMotion * flow(1.5 * qw + 3.0, th + 3.1);   // swirl it
+      float h = sin(3.4 * qh.x + 1.2 * qh.y + th + 0.7) * sin(3.0 * qh.y - 1.0 * qh.x - th + 2.0);
+      h += 0.35 * sin(2.0 * qh.x - 2.6 * qh.y + 2.0 * th + 4.1);
+      float haze = smoothstep(0.30, 1.10, h) * 0.65 * uLight;
+      col = mix(col, vec3(252.0, 247.0, 253.0) / 255.0, clamp(haze, 0.0, 1.0));
 
       // Behind the logos the brightest areas ease slightly towards mauve in a
       // wide soft oval, so the white text always reads.
