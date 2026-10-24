@@ -146,7 +146,7 @@
     motion: 1,      // how strongly the colours flow and fold
     light: 1,       // strength of the drifting white haze
     vivid: 1.0,     // colour saturation (1 = colours as sampled)
-    duration: 6,    // seconds per seamless loop
+    duration: 8,    // seconds per seamless loop
     fps: 60,
     scale: 2,
   };
@@ -216,9 +216,11 @@
       vec2 qw = q + 0.16 * uMotion * flow(q, th);
       qw += 0.10 * uMotion * flow(1.3 * qw + 2.0, th + 1.7);
 
-      // Position along the ramp: a diagonal from blush (bottom left) to pale
-      // blue (top right), plus travelling ripples that make the colours undulate.
-      float v = 0.52 + 0.62 * dot(qw, normalize(vec2(1.0, -0.8)));
+      // Position along the ramp: a gradient from blush to pale blue whose
+      // direction turns one full circle per loop, so every colour travels around
+      // the whole canvas, plus travelling ripples that make the colours undulate.
+      float ang = th - 0.675;   // starts on the reference diagonal (bottom left to top right)
+      float v = 0.52 + 0.58 * dot(qw, vec2(cos(ang), sin(ang)));
       v += 0.10 * sin(3.0 * qw.y + 2.2 * qw.x + th);
       v += 0.06 * sin(5.0 * qw.x - 3.6 * qw.y - 2.0 * th + 1.0);
       vec3 col = ramp(v);

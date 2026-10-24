@@ -1,7 +1,7 @@
 // Renders seamless MP4 loops (and a PNG of the first frame) for every text layer in
 // assets/overlays, using the same shader as index.html in headless Chromium.
 //
-//   node scripts/render.mjs                       # all thumbnails, 2x, 6s, 60fps
+//   node scripts/render.mjs                       # all thumbnails, 2x, 8s, 60fps
 //   node scripts/render.mjs hitachi-x-bosch --scale 1 --duration 10 --fps 30
 //   node scripts/render.mjs --motion 1.2 --light 0.8 --vivid 1.3
 //
@@ -16,7 +16,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'exports');
 
 const args = process.argv.slice(2);
-const opts = { scale: 2, duration: 6, fps: 60, motion: 1, light: 1, vivid: 1.0, crf: 12 };
+const opts = { scale: 2, duration: 8, fps: 60, motion: 1, light: 1, vivid: 1.0, crf: 12 };
 const names = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i].startsWith('--')) opts[args[i].slice(2)] = Number(args[++i]);

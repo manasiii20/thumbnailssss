@@ -6,8 +6,8 @@ Animated portfolio thumbnails, 482 × 402. The logos stay still. Behind them, bl
 
 | File | What it is |
 | --- | --- |
-| `exports/hitachi-x-bosch@2x.mp4` | 964 × 804, 6 s loop, 60 fps (2x, looks sharp on retina screens at 482 × 402) |
-| `exports/hitachi-x-bosch.mp4` | 482 × 402, 6 s loop, 60 fps |
+| `exports/hitachi-x-bosch@2x.mp4` | 964 × 804, 8 s loop, 60 fps (2x, looks sharp on retina screens at 482 × 402) |
+| `exports/hitachi-x-bosch.mp4` | 482 × 402, 8 s loop, 60 fps |
 | `exports/hitachi-x-bosch@2x.png` / `.png` | The first frame of the loop as a still |
 
 ## Make or tweak a thumbnail in the browser
@@ -44,5 +44,5 @@ The output is H.264 High, yuv420p, tagged BT.709, with faststart. It plays in br
 ## How it's built
 
 - `assets/overlays/hitachi-x-bosch.png` is the text layer pulled from the reference thumbnail as white plus alpha, so the logos match it pixel for pixel.
-- The background is a WebGL shader in `index.html`. A smooth field runs diagonally from blush (bottom left) to pale blue (top right), with travelling ripples on top. A two-level flow field folds it, so the colours keep mixing into new shapes. The field is coloured through a ramp of colours sampled from the reference gradient. The white haze is a second pattern in the same folded space, swirled a little more, so it mixes in with the colours. Near the logos, the brightest areas ease slightly towards mauve in a soft oval, so the white text always reads. The oval is found automatically from each text layer. Time only enters as whole turns of the loop, so the loop has no seam.
+- The background is a WebGL shader in `index.html`. A smooth field runs from blush to pale blue. Its direction turns one full circle per loop, so every colour travels around the whole canvas, and travelling ripples move on top. A two-level flow field folds it, so the colours keep mixing into new shapes. The field is coloured through a ramp of colours sampled from the reference gradient. The white haze is a second pattern in the same folded space, swirled a little more, so it mixes in with the colours. Near the logos, the brightest areas ease slightly towards mauve in a soft oval, so the white text always reads. The oval is found automatically from each text layer. Time only enters as whole turns of the loop, so the loop has no seam.
 - `vendor/mp4-muxer.js` (MIT) writes the MP4 container for in-browser export.
