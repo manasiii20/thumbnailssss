@@ -1,9 +1,9 @@
-// Renders seamless MP4 loops (and the exact still PNG) for every text layer in
+// Renders seamless MP4 loops (and a PNG of the first frame) for every text layer in
 // assets/overlays, using the same shader as index.html in headless Chromium.
 //
-//   node scripts/render.mjs                       # all thumbnails, 2x, 8s, 60fps
+//   node scripts/render.mjs                       # all thumbnails, 2x, 6s, 60fps
 //   node scripts/render.mjs hitachi-x-bosch --scale 1 --duration 10 --fps 30
-//   node scripts/render.mjs --motion 1.2 --light 0.8
+//   node scripts/render.mjs --motion 1.2 --light 0.8 --vivid 1.3
 //
 // Needs: ffmpeg on PATH, and Playwright (npm install).
 import { chromium } from 'playwright';
@@ -16,7 +16,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(root, 'exports');
 
 const args = process.argv.slice(2);
-const opts = { scale: 2, duration: 8, fps: 60, motion: 1, light: 1, crf: 12 };
+const opts = { scale: 2, duration: 6, fps: 60, motion: 1, light: 1, vivid: 1.3, crf: 12 };
 const names = [];
 for (let i = 0; i < args.length; i++) {
   if (args[i].startsWith('--')) opts[args[i].slice(2)] = Number(args[++i]);
@@ -54,19 +54,16 @@ for (const name of targets) {
   const [width, height] = [482 * opts.scale, 402 * opts.scale];
   await page.evaluate(async ({ name, opts }) => {
     const t = window.thumb;
-    Object.assign(t.config, { motion: opts.motion, light: opts.light });
+    Object.assign(t.config, { motion: opts.motion, light: opts.light, vivid: opts.vivid });
     t.exportMode(true);
     t.setSize(opts.scale);
     await t.setOverlay(name);
   }, { name, opts });
 
-  // Exact still (reference composite, no motion/light).
+  // First frame of the loop as a still.
   const png = await page.evaluate(() => {
-    window.thumb.setStill(true);
     window.thumb.render(0);
-    const url = document.getElementById('stage').toDataURL('image/png');
-    window.thumb.setStill(false);
-    return url.split(',')[1];
+    return document.getElementById('stage').toDataURL('image/png').split(',')[1];
   });
   writeFileSync(join(outDir, `${name}${suffix}.png`), Buffer.from(png, 'base64'));
 

@@ -100,15 +100,15 @@
     <label>Thumbnail (text layer)
       <select id="overlay"></select>
     </label>
-    <div class="two">
-      <button class="file">Load text PNG<input type="file" id="overlayFile" accept="image/png"></button>
-      <button class="file">Load gradient<input type="file" id="gradientFile" accept="image/*"></button>
-    </div>
+    <button class="file">Load text PNG<input type="file" id="overlayFile" accept="image/png"></button>
 
     <hr>
 
     <label><span class="row">Motion <output id="motionOut"></output></span>
       <input type="range" id="motion" min="0" max="2" step="0.05">
+    </label>
+    <label><span class="row">Vividness <output id="vividOut"></output></span>
+      <input type="range" id="vivid" min="0.6" max="1.6" step="0.05">
     </label>
     <label><span class="row">White light <output id="lightOut"></output></span>
       <input type="range" id="light" min="0" max="2" step="0.05">
@@ -128,12 +128,9 @@
 
     <hr>
 
-    <div class="two">
-      <button id="play">Pause</button>
-      <button id="still">Show still</button>
-    </div>
+    <button id="play">Pause</button>
     <button class="primary" id="exportMp4">Export MP4 loop</button>
-    <button id="exportPng">Export still PNG</button>
+    <button id="exportPng">Export first frame as PNG</button>
     <div id="status"></div>
   </div>
 </main>
@@ -146,9 +143,10 @@
 
   // Look settings. Exposed on window.thumb so scripts/render.mjs uses the exact same values.
   const config = {
-    motion: 1,      // strength of the gradient flow
+    motion: 1,      // how far the colour blobs travel
     light: 1,       // strength of the drifting white light
-    duration: 8,    // seconds per seamless loop
+    vivid: 1.3,     // colour saturation (1 = colours as sampled)
+    duration: 6,    // seconds per seamless loop
     fps: 60,
     scale: 2,
   };
@@ -169,26 +167,16 @@
   const FRAG = `
     precision highp float;
     varying vec2 vUv;
-    uniform sampler2D uBg;
     uniform sampler2D uText;
     uniform float uPhase;   // 0..1 across one loop; every term below is periodic in it
     uniform float uMotion;
     uniform float uLight;
+    uniform float uVivid;
     uniform float uAspect;  // width / height
     const float TAU = 6.28318530718;
 
-    // Gradient lookup. Past the frame edge the gradient is continued linearly
-    // (point reflection) so displaced samples never show a hard edge or a fold.
-    vec3 gradient(vec2 p) {
-      vec2 c = clamp(p, 0.0, 1.0);
-      vec3 a = texture2D(uBg, c).rgb;
-      if (c == p) return a;
-      vec3 b = texture2D(uBg, clamp(2.0 * c - p, 0.0, 1.0)).rgb;
-      return clamp(2.0 * a - b, 0.0, 1.0);
-    }
-
-    // Smooth flow field. Time enters only as whole multiples of th, so the
-    // field at uPhase = 1 equals the field at uPhase = 0: a seamless loop.
+    // Smooth flow field that bends the colour fields into organic shapes.
+    // Time enters only as whole multiples of th, so phase 1 equals phase 0.
     vec2 flow(vec2 q, float th) {
       vec2 d = vec2(0.0);
       d += 0.55 * vec2(sin(1.6 * q.y + 0.9 * q.x + th + 0.3),
@@ -198,6 +186,18 @@
       d += 0.15 * vec2(sin(3.9 * q.x + 3.1 * q.y + 2.0 * th + 4.2),
                        cos(3.6 * q.y - 4.2 * q.x - 3.0 * th + 4.0));
       return d;
+    }
+
+    // A colour blob travelling on a closed loop around its home position.
+    // f is a whole number of laps per loop (negative = the other way round).
+    vec3 acc = vec3(0.0);
+    float wsum = 0.0;
+    void blob(vec2 q, vec3 rgb, vec2 home, vec2 amp, float f, float off, float r, float th) {
+      vec2 c = home + 1.5 * uMotion * amp * vec2(cos(f * th + off), sin(f * th + off * 1.7));
+      vec2 d = q - c;
+      float w = exp(-dot(d, d) / (r * r));
+      acc += w * rgb / 255.0;
+      wsum += w;
     }
 
     float glow(vec2 q, vec2 c, float r) {
@@ -212,44 +212,40 @@
     void main() {
       vec2 p = vUv;
       float th = TAU * uPhase;
-      vec2 aspect = vec2(uAspect, 1.0);
-      vec2 q = (p - 0.5) * aspect;             // centred, aspect-correct space
+      vec2 q = (p - 0.5) * vec2(uAspect, 1.0);   // centred; frame is 1.2 wide, 1 tall
+      vec2 qw = q + 0.09 * uMotion * flow(q, th);
 
-      // Two-level domain warp gives an organic, fluid drift rather than a slide.
-      vec2 w1 = flow(q, th);
-      vec2 w2 = flow(q + 0.30 * w1, th + 1.7);
-      vec2 disp = (0.6 * w1 + 0.4 * w2) * 0.085 * uMotion;
-      vec3 col = gradient(p + disp / aspect);
+      // Colours sampled from the reference gradient. Pink and peach on the left,
+      // blue and lilac on the right, mauve in the middle, magenta bottom right.
+      blob(qw, vec3(253.0, 140.0, 190.0), vec2(-0.32, -0.30), vec2(0.22, 0.14),  1.0, 0.0, 0.29, th); // hot pink
+      blob(qw, vec3(254.0, 169.0, 187.0), vec2(-0.48,  0.04), vec2(0.12, 0.18), -1.0, 1.2, 0.26, th); // soft pink
+      blob(qw, vec3(255.0, 201.0, 187.0), vec2(-0.46,  0.50), vec2(0.18, 0.10),  1.0, 2.5, 0.26, th); // peach
+      blob(qw, vec3(207.0, 151.0, 208.0), vec2( 0.00,  0.02), vec2(0.20, 0.16), -1.0, 3.6, 0.26, th); // mauve
+      blob(qw, vec3(207.0, 218.0, 246.0), vec2( 0.52, -0.46), vec2(0.16, 0.12),  1.0, 4.4, 0.27, th); // light blue
+      blob(qw, vec3(203.0, 193.0, 240.0), vec2( 0.56, -0.04), vec2(0.12, 0.20), -1.0, 5.0, 0.24, th); // lavender
+      blob(qw, vec3(222.0, 128.0, 220.0), vec2( 0.30,  0.46), vec2(0.24, 0.12),  1.0, 0.8, 0.29, th); // magenta
+      blob(qw, vec3(213.0, 152.0, 229.0), vec2( 0.62,  0.30), vec2(0.10, 0.14), -2.0, 2.0, 0.20, th); // lilac
+      vec3 col = acc / max(wsum, 1e-5);
+
+      // Vividness: push saturation away from grey.
+      float luma = dot(col, vec3(0.299, 0.587, 0.114));
+      col = clamp(mix(vec3(luma), col, uVivid), 0.0, 1.0);
 
       // Soft white light: two diffuse glows on looping paths, bent by the same
-      // flow so they read as light inside the colour rather than spotlights.
-      vec2 ql = q + disp * 1.4;
-      // One glow drifts through the upper half, one through the lower half, so
-      // they mostly travel around the logos instead of washing over them.
+      // flow. One drifts through the upper half and one through the lower half
+      // so they mostly travel around the logos.
       vec2 c1 = vec2(0.44 * uAspect * cos(th + 2.4), -0.25 + 0.11 * sin(2.0 * th + 0.4));
       vec2 c2 = vec2(0.40 * uAspect * cos(-th + 0.3), 0.26 + 0.10 * sin(-2.0 * th + 2.2));
-      float L = 0.27 * glow(ql, c1, 0.34) + 0.19 * glow(ql, c2, 0.28);
+      float L = 0.18 * glow(qw, c1, 0.30) + 0.13 * glow(qw, c2, 0.26);
       L = clamp(L * uLight, 0.0, 1.0);
       col = 1.0 - (1.0 - col) * (1.0 - L);    // screen blend with white
 
-      // Text layer: white with alpha, exactly as extracted from the reference.
+      // Text layer: white with alpha.
       float a = texture2D(uText, p).a;
       col = mix(col, vec3(1.0), a);
 
       // Sub-LSB dither so smooth gradients don't band after video compression.
       col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
-      gl_FragColor = vec4(col, 1.0);
-    }`;
-
-  // Still mode: the untouched reference composite (gradient + text), no motion, no light.
-  const FRAG_STILL = `
-    precision highp float;
-    varying vec2 vUv;
-    uniform sampler2D uBg;
-    uniform sampler2D uText;
-    void main() {
-      vec3 col = texture2D(uBg, vUv).rgb;
-      col = mix(col, vec3(1.0), texture2D(uText, vUv).a);
       gl_FragColor = vec4(col, 1.0);
     }`;
 
@@ -268,10 +264,10 @@
     gl.linkProgram(p);
     if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
     const u = {};
-    for (const name of ['uBg', 'uText', 'uPhase', 'uMotion', 'uLight', 'uAspect']) u[name] = gl.getUniformLocation(p, name);
+    for (const name of ['uText', 'uPhase', 'uMotion', 'uLight', 'uVivid', 'uAspect']) u[name] = gl.getUniformLocation(p, name);
     return { p, u };
   }
-  const progs = { anim: program(FRAG), still: program(FRAG_STILL) };
+  const prog = program(FRAG);
 
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
@@ -288,7 +284,7 @@
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return t;
   }
-  const tex = { bg: makeTexture(0), text: makeTexture(1) };
+  const textTex = makeTexture(1);
 
   function upload(unit, texture, img) {
     gl.activeTexture(gl.TEXTURE0 + unit);
@@ -308,7 +304,6 @@
     });
   }
 
-  let still = false;
   function setSize(scale) {
     canvas.width = W * scale;
     canvas.height = H * scale;
@@ -316,16 +311,14 @@
   }
 
   function render(phase) {
-    const { p, u } = still ? progs.still : progs.anim;
+    const { p, u } = prog;
     gl.useProgram(p);
-    gl.uniform1i(u.uBg, 0);
     gl.uniform1i(u.uText, 1);
-    if (!still) {
-      gl.uniform1f(u.uPhase, ((phase % 1) + 1) % 1);
-      gl.uniform1f(u.uMotion, config.motion);
-      gl.uniform1f(u.uLight, config.light);
-      gl.uniform1f(u.uAspect, W / H);
-    }
+    gl.uniform1f(u.uPhase, ((phase % 1) + 1) % 1);
+    gl.uniform1f(u.uMotion, config.motion);
+    gl.uniform1f(u.uLight, config.light);
+    gl.uniform1f(u.uVivid, config.vivid);
+    gl.uniform1f(u.uAspect, W / H);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
@@ -355,12 +348,11 @@
 
   async function setOverlay(name) {
     currentOverlay = name;
-    upload(1, tex.text, await loadImage(overlays[name]));
+    upload(1, textTex, await loadImage(overlays[name]));
     overlaySelect.value = name;
   }
 
   const ready = (async () => {
-    upload(0, tex.bg, await loadImage(assets.gradient));
     refreshOverlayList();
     await setOverlay(currentOverlay);
     setSize(config.scale);
@@ -372,12 +364,14 @@
   const fmt = (v) => Number(v).toFixed(2);
 
   $('motion').value = config.motion; $('motionOut').textContent = fmt(config.motion);
+  $('vivid').value = config.vivid; $('vividOut').textContent = fmt(config.vivid);
   $('light').value = config.light; $('lightOut').textContent = fmt(config.light);
   $('duration').value = config.duration;
   $('fps').value = String(config.fps);
   $('scale').value = String(config.scale);
 
   $('motion').oninput = (e) => { config.motion = +e.target.value; $('motionOut').textContent = fmt(config.motion); };
+  $('vivid').oninput = (e) => { config.vivid = +e.target.value; $('vividOut').textContent = fmt(config.vivid); };
   $('light').oninput = (e) => { config.light = +e.target.value; $('lightOut').textContent = fmt(config.light); };
   $('duration').onchange = (e) => { config.duration = Math.max(2, +e.target.value || 8); };
   $('fps').onchange = (e) => { config.fps = +e.target.value; };
@@ -402,21 +396,12 @@
     await setOverlay(name);
     status(`Loaded text layer “${name}”.`);
   };
-  $('gradientFile').onchange = async (e) => {
-    const { name, url } = await readFile(e.target);
-    upload(0, tex.bg, await loadImage(url));
-    status(`Loaded gradient “${name}”.`);
-  };
 
   let playing = true, exporting = false, t0 = performance.now(), pausedPhase = 0;
   const phaseNow = () => playing ? ((performance.now() - t0) / 1000 / config.duration) % 1 : pausedPhase;
   $('play').onclick = () => {
     if (playing) { pausedPhase = phaseNow(); playing = false; $('play').textContent = 'Play'; }
     else { t0 = performance.now() - pausedPhase * config.duration * 1000; playing = true; $('play').textContent = 'Pause'; }
-  };
-  $('still').onclick = () => {
-    still = !still;
-    $('still').textContent = still ? 'Show motion' : 'Show still';
   };
 
   function tick() {
@@ -448,14 +433,11 @@
   }
 
   $('exportPng').onclick = () => {
-    const wasStill = still;
-    still = true;
     exporting = true;
     setSize(config.scale);
     render(0);
     canvas.toBlob((b) => {
       download(b, `${currentOverlay}${config.scale === 2 ? '@2x' : ''}.png`);
-      still = wasStill;
       exporting = false;
     }, 'image/png');
   };
@@ -470,8 +452,6 @@
     const btn = $('exportMp4');
     btn.disabled = true;
     exporting = true;
-    const wasStill = still;
-    still = false;
     try {
       setSize(config.scale);
       const width = canvas.width, height = canvas.height, fps = config.fps;
@@ -512,7 +492,6 @@
     } catch (e) {
       status('Export failed: ' + e.message);
     } finally {
-      still = wasStill;
       exporting = false;
       btn.disabled = false;
     }
@@ -521,7 +500,6 @@
   window.thumb = {
     config, ready, render, readPixels, setSize, setOverlay,
     overlays: () => Object.keys(overlays),
-    setStill: (v) => { still = v; },
     exportMode: (v) => { exporting = v; },  // stops the live preview from drawing
   };
   ready.then(() => requestAnimationFrame(tick)).catch((e) => status(e.message));
