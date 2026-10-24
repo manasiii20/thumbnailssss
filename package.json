@@ -1,0 +1,12 @@
+{
+  "name": "thumbnail-studio",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "embed": "node scripts/embed-assets.mjs",
+    "render": "node scripts/embed-assets.mjs && node scripts/render.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
+}
