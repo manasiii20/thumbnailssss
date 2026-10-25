@@ -83,7 +83,8 @@ VARIANTS = {
     "top-haze": [(0.50, -0.30, 0.85, 0.55, 0.24), (1.05, 0.10, 0.35, 0.45, 0.10), (-0.05, 0.15, 0.30, 0.40, 0.08)],
 }
 
-for name, spots in VARIANTS.items():
-    for scale, suffix in ((1, ""), (2, "@2x")):
-        render(spots, scale, seed=7 + scale).save(OUT / f"d33c27-{name}{suffix}.png")
-    print("wrote", name)
+if __name__ == "__main__":
+    for name, spots in VARIANTS.items():
+        for scale, suffix in ((1, ""), (2, "@2x")):
+            render(spots, scale, seed=7 + scale).save(OUT / f"d33c27-{name}{suffix}.png")
+        print("wrote", name)
