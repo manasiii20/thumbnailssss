@@ -72,9 +72,11 @@ def render(spots, scale, seed):
 
 
 VARIANTS = {
-    # Warm glow rising from the bottom-right corner, a faint echo top-left.
-    # The corner reaches a slightly lighter #D33C27.
-    "corner-glow": [(1.06, 1.10, 0.58, 0.66, 0.52), (-0.08, -0.10, 0.45, 0.50, 0.12)],
+    # Light, airy: the red is spread over several soft glows (bottom right,
+    # top left, a touch on the right edge and bottom left) with open white
+    # between them. Strengths are before the RED multiplier.
+    "corner-glow": [(1.05, 1.07, 0.52, 0.56, 0.31), (-0.06, -0.08, 0.42, 0.46, 0.15),
+                    (1.10, 0.30, 0.24, 0.28, 0.09), (0.12, 1.14, 0.30, 0.22, 0.08)],
     # A gentle diagonal wash, strongest along the bottom edge.
     "diagonal-wash": [(0.85, 1.25, 0.95, 0.65, 0.26), (0.10, 1.10, 0.55, 0.45, 0.14), (0.95, -0.15, 0.35, 0.35, 0.07)],
     # Soft haze hanging from the top, the centre stays clean white.
