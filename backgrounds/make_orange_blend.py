@@ -1,4 +1,4 @@
-"""Blended white + #F24B18 gradients for the 4th thumbnail (480 x 463), no grain.
+"""Blended white + #F24B18 gradients (the strongest spot is the full orange) for the 4th thumbnail (480 x 463), no grain.
 
     python3 backgrounds/make_orange_blend.py
 
@@ -72,7 +72,11 @@ def render(design, scale):
     yy, xx = np.mgrid[0:h, 0:w].astype(float)
     x, y = xx / h, yy / h
     qx, qy = swirl(x, y, k)
-    t = np.clip(keep_centre_light(x, y, f(qx, qy)), 0, 1)[..., None]
+    t = keep_centre_light(x, y, f(qx, qy))
+    # Lift the whole field so its strongest spot reaches the true #F24B18;
+    # the curve keeps the light areas light while the peaks get full colour.
+    t = np.clip(t / t.max(), 0, 1) ** 0.85
+    t = t[..., None]
     lab = WHITE * (1 - t) + ORANGE * t
     img = oklab_to_srgb(lab) + np.random.default_rng(3).uniform(-0.5, 0.5, (h, w, 1))
     return Image.fromarray(np.clip(np.round(img), 0, 255).astype(np.uint8))
