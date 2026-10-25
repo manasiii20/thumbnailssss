@@ -28,7 +28,7 @@
   - The card grows, and the title, bar, 78% and icons glide and cross-fade into their new spots.
   - The avatars spread into chips.
   - "4 credits" and "Testing" fade out, and the new content fades in from top to bottom out of a light blur.
-- **The scrolls** keep the gaps from your storyboard: 202 px at 2x going up and about 400 px coming back down. Whatever is leaving eases back slightly, and whatever is arriving grows from 93% to 100% as it lands.
+- **The scrolls** are pure movement. The card and dashboard keep their exact pixels, with no blur, scaling or fading, and they keep the gaps from your storyboard: 202 px at 2x going up and about 400 px coming back down.
 
 ## Re-render
 

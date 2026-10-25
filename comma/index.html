@@ -312,62 +312,23 @@
     ctx.restore();
   }
 
-  // During the scroll everything is drawn on a layer first, then laid down
-  // with a vertical motion blur that follows the scroll speed.
-  const layer = document.createElement('canvas');
-  layer.width = L.size[0]; layer.height = L.size[1];
-  const lctx = layer.getContext('2d');
+  // The scrolls are pure movement: each piece is drawn exactly as it rests
+  // (no blur, no scaling, no fading), snapped to whole pixels so it stays crisp.
+  const at = (image, x, y) => ctx.drawImage(image, Math.round(x), Math.round(y));
 
-  // Draw an image on the scroll layer, scaled about its own centre.
-  function place(image, x, y, k) {
-    const w = image.width, h = image.height;
-    lctx.save();
-    lctx.translate(x + w / 2, y + h / 2);
-    lctx.scale(k, k);
-    lctx.drawImage(image, -w / 2, -h / 2);
-    lctx.restore();
-  }
-
-  // Lay the scroll layer down with a vertical motion blur that follows the speed.
-  // The copies are summed with "lighter" at 1/n each, a true average, so
-  // soft edges like the dashboard's shadow keep their exact opacity.
-  const blurLayer = document.createElement('canvas');
-  blurLayer.width = L.size[0]; blurLayer.height = L.size[1];
-  const bctx = blurLayer.getContext('2d');
-  function blurDown(v) {
-    const len = Math.min(16, v / T.fps * 0.38);
-    if (len < 0.15) { ctx.drawImage(layer, 0, 0); return; }
-    const n = 9;
-    bctx.setTransform(1, 0, 0, 1, 0, 0);
-    bctx.globalCompositeOperation = 'source-over';
-    bctx.globalAlpha = 1;
-    bctx.clearRect(0, 0, blurLayer.width, blurLayer.height);
-    bctx.globalCompositeOperation = 'lighter';
-    bctx.globalAlpha = 1 / n;
-    for (let i = 0; i < n; i++) bctx.drawImage(layer, 0, (i / (n - 1) - 0.5) * len);
-    ctx.drawImage(blurLayer, 0, 0);
-  }
-
-  // Up: the expanded card leaves the top (easing back a touch) while the
-  // dashboard rises from below and grows into place.
+  // Up: the expanded card leaves the top while the dashboard rises into place.
   function drawPan(t) {
-    const u = phase(T.pan, t), s = panAt(t);
-    lctx.setTransform(1, 0, 0, 1, 0, 0);
-    lctx.clearRect(0, 0, layer.width, layer.height);
-    place(img.c2, L.card.to[0], L.card.to[1] - s, 1 - 0.05 * easePan(u));
-    place(img.dash, L.dash.x, L.dash.y + (PAN_DIST - s), 0.93 + 0.07 * easeOpen(clamp01((u - 0.1) / 0.9)));
-    blurDown(Math.abs(panAt(t + 0.004) - panAt(t - 0.004)) / 0.008);
+    const s = panAt(t);
+    at(img.c2, L.card.to[0], L.card.to[1] - s);
+    at(img.dash, L.dash.x, L.dash.y + (PAN_DIST - s));
   }
 
-  // Down: the mirror of the way up. The dashboard sinks out (easing back) while
-  // the collapsed card comes down from the top and settles on its first spot.
+  // Down: the dashboard sinks out while the collapsed card comes down from the
+  // top and lands on its first spot.
   function drawBack(t) {
-    const u = phase(T.back, t), s = backAt(t);
-    lctx.setTransform(1, 0, 0, 1, 0, 0);
-    lctx.clearRect(0, 0, layer.width, layer.height);
-    place(img.dash, L.dash.x, L.dash.y + s, 1 - 0.05 * easePan(u));
-    place(img.c1, L.card.from[0], L.card.from[1] - (BACK_DIST - s), 0.93 + 0.07 * easeOpen(clamp01((u - 0.1) / 0.9)));
-    blurDown(Math.abs(backAt(t + 0.004) - backAt(t - 0.004)) / 0.008);
+    const s = backAt(t);
+    at(img.dash, L.dash.x, L.dash.y + s);
+    at(img.c1, L.card.from[0], L.card.from[1] - (BACK_DIST - s));
   }
 
   function renderAt(t) {
