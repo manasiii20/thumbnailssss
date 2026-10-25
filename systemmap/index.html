@@ -5,147 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>System Map Thumbnail</title>
 <style>
-  :root { --bg: #f3f1ef; --ink: #1d1a18; --muted: #6f6a66; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: #191716; --ink: #eeeae6; --muted: #a39d98; color-scheme: dark; }
-  }
-  :root[data-theme="dark"] { --bg: #191716; --ink: #eeeae6; --muted: #a39d98; color-scheme: dark; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 ui-sans-serif, system-ui, sans-serif; }
+  :root { --bg: #f3f2f1; --muted: #6f6a66; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #191716; --muted: #a39d98; color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #191716; --muted: #a39d98; color-scheme: dark; }
+  body { margin: 0; background: var(--bg); font: 14px/1.4 ui-sans-serif, system-ui, sans-serif; }
   main { display: flex; flex-direction: column; align-items: center; gap: 10px; padding-block: 40px;
          padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
-  /* 960 x 926 buffer (2x), shown at the true 480 x 463 thumbnail size. */
-  #stage { width: 480px; max-width: 100%; height: auto; aspect-ratio: 480 / 463; display: block;
-           box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 32px rgba(60,30,10,.12); }
+  img { width: 480px; max-width: 100%; height: auto; aspect-ratio: 480 / 463; display: block; background: #fff;
+        box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 32px rgba(40,30,20,.12); }
   .meta { color: var(--muted); font-size: 12px; }
 </style>
 </head>
 <body>
 <main>
-  <canvas id="stage" width="960" height="926"></canvas>
-  <div class="meta">480 × 463 · 2x</div>
+  <img src="exports/system-map@2x.png" alt="The five subsystems of the stationery shop system map, arranged two, one, two, with all their connections">
+  <div class="meta">480 × 463 · shown from the 2x file</div>
 </main>
-
-<script src="assets/embedded.js"></script>
-<script>
-(() => {
-  const { images: SRC, blocks: B } = window.MAP_ASSETS;
-  const W = 960, H = 926, S = 1.1;            // blocks drawn at 1.1x their gigamap size
-
-  // Where each block sits (top-left of its cut-out) on the 2x canvas.
-  const PLACE = {
-    'communication':        [6, 0],
-    'user-behaviour':       [568, 22],
-    'spatial-dynamics':     [270, 320],
-    'material-flow':        [6, 606],
-    'environmental-impact': [566, 620],
-  };
-  // Gigamap pixel -> canvas pixel for a given block.
-  const at = (name, [x, y]) => [PLACE[name][0] + (x - B[name].x) * S, PLACE[name][1] + (y - B[name].y) * S];
-
-  // Isometric directions used by the gigamap (30 degree grid).
-  const ISO = { ur: [0.866, -0.5], dr: [0.866, 0.5], ul: [-0.866, -0.5], dl: [-0.866, 0.5], u: [0, -1], d: [0, 1] };
-  const COLORS = { black: '#2a2a29', green: '#3aa655', blue: '#0d32e8', orange: '#e04514' };
-
-  // ---------- Stepping tiles (the paths between subsystems) ----------
-  const TILE = { w: 74, h: 42, t: 6.6, gap: 10 };
-  const STEP = { x: TILE.w / 2 + TILE.gap * 0.866, y: TILE.h / 2 + TILE.gap * 0.5 };
-  function tilePath(start, moves) {
-    const out = [start.slice()];
-    let [x, y] = start;
-    for (const m of moves) {
-      x += Math.sign(ISO[m][0]) * STEP.x;
-      y += Math.sign(ISO[m][1]) * STEP.y;
-      out.push([x, y]);
-    }
-    return out;
-  }
-  // Communication -> Spatial Dynamics: a zigzag down, like the gigamap's staggered pairs.
-  // Drawn after Communication and before Spatial Dynamics, so it runs behind the store.
-  const TILES_A = tilePath([300, 294], ['dr', 'dl', 'dr']);
-  // Spatial Dynamics (counter) -> User Behaviour: rises from the counter tile.
-  // Drawn after both, as it sits in front of them.
-  const TILES_B = tilePath([696, 474], ['ur', 'ul', 'ur', 'ul', 'ur', 'ul', 'ul']);
-
-  // ---------- Connections between subsystems ----------
-  // Each is a start point plus isometric moves; the last segment carries the arrowhead.
-  // Colours follow the gigamap: black = information/material links,
-  // green = balancing loops, blue = reinforcing loops, orange = impact.
-  const LINKS = [
-    { c: 'black',  from: [12, 200],  moves: [['d', 528]] },                       // Communication -> Material Flow (wholesaler, supplier)
-    { c: 'black',  from: [330, 140], moves: [['ur', 130], ['dr', 125]] },          // Communication -> User Behaviour (faculty, students, WhatsApp)
-    { c: 'green',  from: [362, 722], moves: [['u', 100], ['ur', 58]] },            // Material Flow -> Spatial Dynamics (balancing loop)
-    { c: 'blue',   from: [318, 590], moves: [['d', 22], ['dl', 52]] },             // Spatial Dynamics -> Material Flow (reinforcing loop)
-    { c: 'blue',   from: [640, 545], moves: [['ur', 180], ['u', 168]] },           // Spatial Dynamics -> User Behaviour (reinforcing loop)
-    { c: 'black',  from: [566, 602], moves: [['dr', 60], ['d', 74]] },             // Spatial Dynamics -> Environmental Impact (maintenance, cleanliness)
-    { c: 'green',  from: [920, 262], moves: [['d', 400]] },                        // User Behaviour -> Environmental Impact (unused items)
-    { c: 'orange', from: [345, 815], moves: [['dr', 50], ['ur', 200]] },           // Material Flow -> Environmental Impact (wastage)
-  ];
-  function linkPoints(l) {
-    const pts = [l.from.slice()];
-    let [x, y] = l.from;
-    for (const [m, len] of l.moves) { x += ISO[m][0] * len; y += ISO[m][1] * len; pts.push([x, y]); }
-    return pts.filter((p, i) => i === 0 || p[0] !== pts[i - 1][0] || p[1] !== pts[i - 1][1]);
-  }
-
-  // ---------- Drawing ----------
-  const canvas = document.getElementById('stage');
-  const ctx = canvas.getContext('2d');
-  const img = {};
-
-  function drawTile([cx, cy]) {
-    const { w, h, t } = TILE;
-    const L = [cx - w / 2, cy], R = [cx + w / 2, cy], T = [cx, cy - h / 2], Bm = [cx, cy + h / 2];
-    // orange slab faces (left-front and right-front)
-    ctx.fillStyle = '#d94a1c';
-    ctx.beginPath(); ctx.moveTo(...L); ctx.lineTo(...Bm); ctx.lineTo(Bm[0], Bm[1] + t); ctx.lineTo(L[0], L[1] + t); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#c94016';
-    ctx.beginPath(); ctx.moveTo(...Bm); ctx.lineTo(...R); ctx.lineTo(R[0], R[1] + t); ctx.lineTo(Bm[0], Bm[1] + t); ctx.closePath(); ctx.fill();
-    // white top with the thin grey outline of the original
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath(); ctx.moveTo(...L); ctx.lineTo(...T); ctx.lineTo(...R); ctx.lineTo(...Bm); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(60,60,60,0.45)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(...L); ctx.lineTo(...T); ctx.lineTo(...R); ctx.stroke();
-  }
-
-  function drawLink(l) {
-    const pts = linkPoints(l);
-    ctx.save();
-    ctx.strokeStyle = COLORS[l.c]; ctx.fillStyle = COLORS[l.c];
-    ctx.lineWidth = 2; ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    pts.forEach((p, i) => (i ? ctx.lineTo(...p) : ctx.moveTo(...p)));
-    ctx.stroke();
-    // arrowhead
-    const [a, b] = pts.slice(-2);
-    const ang = Math.atan2(b[1] - a[1], b[0] - a[0]);
-    ctx.translate(...b); ctx.rotate(ang);
-    ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(-11, -5.5); ctx.lineTo(-11, 5.5); ctx.closePath(); ctx.fill();
-    ctx.restore();
-  }
-
-  function render() {
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(img.bg, 0, 0, W, H);
-    LINKS.forEach(drawLink);
-    const block = (name) => { const [x, y] = PLACE[name]; ctx.drawImage(img[name], x, y, B[name].w * S, B[name].h * S); };
-    const tiles = (list) => [...list].sort((p, q) => p[1] - q[1]).forEach(drawTile);
-    // back to front: farther things first, so nearer ones overlap them
-    block('communication');
-    block('user-behaviour');
-    tiles(TILES_A);
-    block('spatial-dynamics');
-    tiles(TILES_B);
-    block('material-flow');
-    block('environmental-impact');
-  }
-
-  const ready = Promise.all(Object.entries(SRC).map(([k, src]) => new Promise((res) => {
-    const im = new Image(); im.onload = () => { img[k] = im; res(); }; im.src = src;
-  })));
-  window.map = { ready, render, at, linkPoints, LINKS, TILES_A, TILES_B };
-  ready.then(render);
-})();
-</script>
 </body>
 </html>

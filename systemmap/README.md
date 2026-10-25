@@ -1,6 +1,6 @@
 # System map thumbnail
 
-480 × 463, built at 2x (960 × 926). The five subsystems from the gigamap, rearranged 2–1–2, with the isometric stepping tiles and the connections between them. The data, insights and stakeholder mapping are left out.
+480 × 463, built at 2x (960 × 926) on plain white. It's the systems layer of the gigamap, rearranged so the five subsystems sit 2–1–2:
 
 | Position | Subsystem |
 | --- | --- |
@@ -10,34 +10,37 @@
 | Bottom left | Material Flow |
 | Bottom right | Environmental Impact |
 
-## Stepping tiles
+The stakeholder mapping on top, the text boxes and the interventions underneath (the thin orange lines) are left out.
 
-The tiles follow the gigamap's paths: Communication → Spatial Dynamics, and Spatial Dynamics (the counter) → User Behaviour.
+## How it stays true to the map
 
-## Connections
+Nothing is redrawn except the stepping stones. The thumbnail is the gigamap's own pixels: every connection line, label, arrow and illustration is kept.
 
-Line colours follow the gigamap:
-- **Black:** information and material links.
-- **Green:** balancing loops.
-- **Blue:** reinforcing loops.
-- **Orange:** impact.
+`compact.py` does this in five steps:
 
-| From | To | Colour | In the gigamap |
-| --- | --- | --- | --- |
-| Communication | Material Flow | Black | Wholesaler, supplier |
-| Communication | User Behaviour | Black | Faculty ⇄ students, WhatsApp group |
-| Material Flow | Spatial Dynamics | Green | Balancing loop: procurement → lack of organisation |
-| Spatial Dynamics | Material Flow | Blue | Reinforcing loop: jugaad, inefficient display → storage |
-| Spatial Dynamics | User Behaviour | Blue | Reinforcing loop: overcrowding → delay |
-| Spatial Dynamics | Environmental Impact | Black | Lack of maintenance → cleanliness, damage |
-| User Behaviour | Environmental Impact | Green | Unused items |
-| Material Flow | Environmental Impact | Orange | Wastage |
+1. It lifts the labels, the titles and the stepping stones off the map.
+2. It slides each corner subsystem towards Spatial Dynamics along an isometric cut line that runs between the illustrations. A cut only removes space where nothing sits.
+3. Wherever a connection line crosses a cut, the line is joined again along the cut. Every line keeps its route and stays on the map's 30° grid.
+4. It puts each label and title back with its own subsystem.
+5. It lays the stepping stones again between the moved subsystems, in the original stone's size and colours.
 
-Every connection is a list of isometric moves in `LINKS` in `index.html`, so a travelling highlight can follow each path later.
+The run prints a check for each cut: how many lines were joined, and how many pixels of drawings, labels or parallel lines fell in removed space. All four read 0.
 
 ## Files
 
-- `source/gigamap.webp`: the original gigamap.
-- `extract.py`: cuts the five illustrations out of the gigamap, unchanged. It removes the page grey around them and the map lines that crossed their floors. Output goes to `assets/`.
-- `embed.py`: packs the assets so `index.html` opens straight from disk.
-- `exports/system-map@2x.png` / `system-map.png`: the still frame.
+| File | What it is |
+| --- | --- |
+| `source/gigamap.webp` | The original gigamap |
+| `trace/detect.py`, `trace/clean.py` | Find the connection lines (vertical and ±30°) |
+| `trace/stamps.py` | Cuts the gigamap into subsystems, labels, titles and stones |
+| `extract.py` | The outline of each subsystem |
+| `compact.py` | Builds the thumbnail |
+| `exports/system-map@2x.png` / `system-map.png` | The result |
+
+```sh
+python3 systemmap/trace/detect.py && python3 systemmap/trace/clean.py
+python3 systemmap/trace/stamps.py
+python3 systemmap/compact.py
+```
+
+The positions of the four corner subsystems are set by `TARGET` in `compact.py`, and title nudges by `TITLE_NUDGE`.

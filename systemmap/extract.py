@@ -126,82 +126,87 @@ def morph(mask, size, op):
     return np.asarray(Image.fromarray((mask * 255).astype(np.uint8)).filter(f)) > 0
 
 
-meta = {}
-for name, b in BLOCKS.items():
-    xs, ys = zip(*b["poly"])
-    x0, y0, x1, y1 = min(xs) - 4, min(ys) - 4, max(xs) + 5, max(ys) + 5
-    crop = SRC[y0:y1, x0:x1].copy()
-    h, w = crop.shape[:2]
-    inside = poly_mask((h, w), b["poly"], x0, y0)
+def main():
+    meta = {}
+    for name, b in BLOCKS.items():
+        xs, ys = zip(*b["poly"])
+        x0, y0, x1, y1 = min(xs) - 4, min(ys) - 4, max(xs) + 5, max(ys) + 5
+        crop = SRC[y0:y1, x0:x1].copy()
+        h, w = crop.shape[:2]
+        inside = poly_mask((h, w), b["poly"], x0, y0)
 
-    # 1. Paint out the map's connection lines that cross the block.
-    sat = crop.max(2) - crop.min(2)
-    thick_orange = morph(morph(sat > 80, 3, "erode"), 9, "dilate")       # platform edges, hotspots
-    protect = thick_orange.copy()
-    for pr in b.get("protect", []):
-        protect |= poly_mask((h, w), pr, x0, y0)
-    segs = [((p1[0] - x0, p1[1] - y0), (p2[0] - x0, p2[1] - y0)) for p1, p2 in b.get("erase", [])]
-    for _ in range(2):
-        crop = erase_segments(crop, segs, inside)
-        crop = erase_thin(crop, morph(inside, 9, "erode") & ~protect, colored_only=True)
-        if b.get("black"):
-            crop = erase_thin(crop, morph(inside, 9, "erode") & ~protect, colored_only=False)
+        # 1. Paint out the map's connection lines that cross the block.
+        sat = crop.max(2) - crop.min(2)
+        thick_orange = morph(morph(sat > 80, 3, "erode"), 9, "dilate")       # platform edges, hotspots
+        protect = thick_orange.copy()
+        for pr in b.get("protect", []):
+            protect |= poly_mask((h, w), pr, x0, y0)
+        segs = [((p1[0] - x0, p1[1] - y0), (p2[0] - x0, p2[1] - y0)) for p1, p2 in b.get("erase", [])]
+        for _ in range(2):
+            crop = erase_segments(crop, segs, inside)
+            crop = erase_thin(crop, morph(inside, 9, "erode") & ~protect, colored_only=True)
+            if b.get("black"):
+                crop = erase_thin(crop, morph(inside, 9, "erode") & ~protect, colored_only=False)
 
-    # 2. Grey page reachable from outside becomes transparent.
-    v = crop.mean(2)
-    neutral = (crop.max(2) - crop.min(2)) <= 6
-    pagelike = neutral & (np.abs(v - PAGE) <= 4)
-    outside = ~inside
-    transparent = grow(outside, outside | pagelike)
-    opaque = inside & ~transparent
-    # The torn-paper underside is almost the page colour, so rebuild it per
-    # column: from the orange platform edge down to the lowest drawn outline.
-    edge = morph(crop.max(2) - crop.min(2) > 80, 3, "erode") & inside      # the thick platform edge only
-    outline = neutral & (v < 241) & (v > 150) & inside      # the paper's light grey outline, not black map lines
-    bottoms = np.full(w, -1)
-    depth = np.full(w, np.nan)
-    for x in range(w):
-        ey = np.nonzero(edge[:, x])[0]
-        if len(ey) == 0:
-            continue
-        e = ey.max()
-        bottoms[x] = e
-        oy = np.nonzero(outline[e + 6:e + 52, x])[0]
-        if len(oy):
-            depth[x] = 6 + oy.max()
-    valid = bottoms >= 0
-    if valid.any():
-        # Robust, smooth depth: wide median, clipped to the paper's usual size.
-        d = depth.copy()
-        good = ~np.isnan(d)
-        if good.any():
-            d[~good] = np.interp(np.nonzero(~good)[0], np.nonzero(good)[0], d[good])
-        else:
-            d[:] = 28
-        sm = np.array([np.median(d[max(0, x - 12):x + 13]) for x in range(w)])
-        sm = np.clip(sm, 14, 40)
-        sm = np.convolve(np.pad(sm, 4, mode="edge"), np.ones(9) / 9, mode="valid")
-        tops = np.array([np.nonzero(edge[:, x])[0].min() if valid[x] else h for x in range(w)])
-        yy = np.arange(h)[:, None]
-        paper = valid[None, :] & (yy >= tops[None, :]) & (yy <= (bottoms + sm)[None, :]) & inside
-        opaque |= paper
-        opaque &= ~(valid[None, :] & (yy > (bottoms + sm + 1)[None, :]))   # nothing hangs below the paper
-    for cut in b.get("cut", []):
-        opaque &= ~poly_mask((h, w), cut, x0, y0)
+        # 2. Grey page reachable from outside becomes transparent.
+        v = crop.mean(2)
+        neutral = (crop.max(2) - crop.min(2)) <= 6
+        pagelike = neutral & (np.abs(v - PAGE) <= 4)
+        outside = ~inside
+        transparent = grow(outside, outside | pagelike)
+        opaque = inside & ~transparent
+        # The torn-paper underside is almost the page colour, so rebuild it per
+        # column: from the orange platform edge down to the lowest drawn outline.
+        edge = morph(crop.max(2) - crop.min(2) > 80, 3, "erode") & inside      # the thick platform edge only
+        outline = neutral & (v < 241) & (v > 150) & inside      # the paper's light grey outline, not black map lines
+        bottoms = np.full(w, -1)
+        depth = np.full(w, np.nan)
+        for x in range(w):
+            ey = np.nonzero(edge[:, x])[0]
+            if len(ey) == 0:
+                continue
+            e = ey.max()
+            bottoms[x] = e
+            oy = np.nonzero(outline[e + 6:e + 52, x])[0]
+            if len(oy):
+                depth[x] = 6 + oy.max()
+        valid = bottoms >= 0
+        if valid.any():
+            # Robust, smooth depth: wide median, clipped to the paper's usual size.
+            d = depth.copy()
+            good = ~np.isnan(d)
+            if good.any():
+                d[~good] = np.interp(np.nonzero(~good)[0], np.nonzero(good)[0], d[good])
+            else:
+                d[:] = 28
+            sm = np.array([np.median(d[max(0, x - 12):x + 13]) for x in range(w)])
+            sm = np.clip(sm, 14, 40)
+            sm = np.convolve(np.pad(sm, 4, mode="edge"), np.ones(9) / 9, mode="valid")
+            tops = np.array([np.nonzero(edge[:, x])[0].min() if valid[x] else h for x in range(w)])
+            yy = np.arange(h)[:, None]
+            paper = valid[None, :] & (yy >= tops[None, :]) & (yy <= (bottoms + sm)[None, :]) & inside
+            opaque |= paper
+            opaque &= ~(valid[None, :] & (yy > (bottoms + sm + 1)[None, :]))   # nothing hangs below the paper
+        for cut in b.get("cut", []):
+            opaque &= ~poly_mask((h, w), cut, x0, y0)
 
-    # 3. Trim thin stubs: keep only what lies near solid areas of the block.
-    core = morph(morph(opaque, 5, "erode"), 5, "dilate")
-    opaque &= morph(core, 11, "dilate")
-    sx, sy = b["seed"][0] - x0, b["seed"][1] - y0
-    seed = np.zeros_like(opaque)
-    seed[sy - 2:sy + 3, sx - 2:sx + 3] = True
-    opaque = grow(seed, opaque)
+        # 3. Trim thin stubs: keep only what lies near solid areas of the block.
+        core = morph(morph(opaque, 5, "erode"), 5, "dilate")
+        opaque &= morph(core, 11, "dilate")
+        sx, sy = b["seed"][0] - x0, b["seed"][1] - y0
+        seed = np.zeros_like(opaque)
+        seed[sy - 2:sy + 3, sx - 2:sx + 3] = True
+        opaque = grow(seed, opaque)
 
-    alpha = np.asarray(Image.fromarray((opaque * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.5)))
-    alpha = np.where(opaque, 255, alpha)
-    out = np.dstack([np.clip(np.round(crop), 0, 255).astype(np.uint8), alpha.astype(np.uint8)])
-    Image.fromarray(out, "RGBA").save(ROOT / f"assets/{name}.png")
-    meta[name] = {"x": x0, "y": y0, "w": w, "h": h, "top": b.get("top"), "hot": b.get("hot")}
-    print(name, w, h)
+        alpha = np.asarray(Image.fromarray((opaque * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(0.5)))
+        alpha = np.where(opaque, 255, alpha)
+        out = np.dstack([np.clip(np.round(crop), 0, 255).astype(np.uint8), alpha.astype(np.uint8)])
+        Image.fromarray(out, "RGBA").save(ROOT / f"assets/{name}.png")
+        meta[name] = {"x": x0, "y": y0, "w": w, "h": h, "top": b.get("top"), "hot": b.get("hot")}
+        print(name, w, h)
 
-(ROOT / "assets/blocks.json").write_text(json.dumps(meta, indent=1))
+    (ROOT / "assets/blocks.json").write_text(json.dumps(meta, indent=1))
+
+
+if __name__ == "__main__":
+    main()
