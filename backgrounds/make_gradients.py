@@ -13,6 +13,7 @@ OUT = Path(__file__).resolve().parent
 W, H = 481, 379
 ACCENT = np.array([0xD3, 0x3C, 0x27], float)
 WHITE = np.array([252, 250, 248], float)      # a warm white, not a flat #fff
+RED = 1.5                                      # overall amount of #D33C27 (1 = the first, lighter round)
 
 
 def glow(xx, yy, cx, cy, rx, ry):
@@ -28,7 +29,7 @@ def render(spots, scale, seed):
     yy /= h
     tint = np.zeros((h, w))
     for cx, cy, rx, ry, strength in spots:
-        tint = 1 - (1 - tint) * (1 - strength * glow(xx, yy, cx, cy, rx, ry))   # soft union
+        tint = 1 - (1 - tint) * (1 - min(1.0, strength * RED) * glow(xx, yy, cx, cy, rx, ry))   # soft union
     img = WHITE[None, None, :] * (1 - tint[..., None]) + ACCENT[None, None, :] * tint[..., None]
 
     # Grain: monochrome, slightly soft, about the same as the Comma backdrop.
