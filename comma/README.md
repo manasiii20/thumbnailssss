@@ -1,6 +1,6 @@
 # Comma show reel
 
-479 × 316, rendered at 2x (958 × 632), 60 fps, 4.4 s. The gradient backdrop (`source/00-gradient.webp`) stays the same in every frame.
+479 × 316, rendered at 2x (958 × 632), 60 fps. It's a 6.25 s seamless loop: the last frame is identical to the first. The gradient backdrop (`source/00-gradient.webp`) stays the same in every frame.
 
 | Time | What happens |
 | --- | --- |
@@ -8,12 +8,15 @@
 | 0.85 s | Click: the cursor squeezes and a soft ring spreads from the click point |
 | 0.93 – 1.38 s | The card morphs open into the expanded card |
 | 1.5 – 1.95 s | The cursor leaves off the right edge |
-| 2.0 – 3.25 s | The expanded card scrolls up and away while the Queue2 dashboard rises from below into the centre, with motion blur that follows the speed |
-| 3.25 – 4.4 s | The dashboard rests, matching `source/ref-dashboard-final.png` |
+| 1.95 – 2.3 s | The expanded card holds |
+| 2.3 – 3.55 s | The expanded card scrolls up and away while the Queue2 dashboard rises into the centre |
+| 3.55 – 4.75 s | The dashboard holds |
+| 4.75 – 6.05 s | The dashboard sinks out while the collapsed card comes down from the top. They keep the gap from the return storyboard, and the card lands on its starting spot |
+| 6.05 – 6.25 s | The collapsed card rests, then the loop starts again |
 
 | File | What it is |
 | --- | --- |
-| `source/` | Your frames: gradient, collapsed card, expanded card, dashboard, plus the two reference frames for the scroll |
+| `source/` | Your frames: gradient, collapsed card, expanded card, dashboard, plus reference frames for the scroll |
 | `exports/comma-show-reel@2x.mp4` | The rendered video |
 | `index.html` | Live preview with a scrubber and an **Export MP4 loop** button |
 
@@ -24,7 +27,7 @@
   - The card grows, and the title, bar, 78% and icons glide and cross-fade into their new spots.
   - The avatars spread into chips.
   - "4 credits" and "Testing" fade out, and the new content fades in from top to bottom out of a light blur.
-- **The scroll** keeps the gap between the card and the dashboard from your mid-way reference frame (202 px at 2x). The card eases back slightly as it leaves, and the dashboard grows from 93% to 100% as it lands.
+- **The scrolls** keep the gaps from your storyboard: 202 px at 2x going up and about 400 px coming back down. Whatever is leaving eases back slightly, and whatever is arriving grows from 93% to 100% as it lands.
 
 ## Re-render
 

@@ -109,13 +109,14 @@
 
   // ---------- Timeline (seconds) ----------
   const T = {
-    duration: 4.4,
+    duration: 6.25,
     fps: 60,
     approach: [0.0, 0.85],   // cursor glides in from the right onto the title pill
     press: [0.85, 0.12],     // click: press down, then release
     expand: [0.93, 0.45],    // collapsed -> expanded
     exit: [1.5, 0.45],       // cursor leaves to the right
-    pan: [2.0, 1.25],        // card scrolls up, the dashboard rises into the centre
+    pan: [2.3, 1.25],        // card scrolls up, the dashboard rises into the centre
+    back: [4.75, 1.3],       // dashboard drops away, the collapsed card comes down from the top
   };
   const CURSOR_START = [1010, 300];   // just off the right edge, centre height
   const CURSOR_CLICK = [392, 290];    // on the "System Design" pill
@@ -167,6 +168,10 @@
   // window rises to its resting spot, keeping the gap from the reference.
   const PAN_DIST = (L.card.to[3] + L.dash.gap) - (L.dash.y + L.dash.windowTop);
   const panAt = (t) => PAN_DIST * easePan(phase(T.pan, t));
+  // On the way back the dashboard and the collapsed card travel together with
+  // the wider gap from the return storyboard, and the card lands where it began.
+  const BACK_DIST = (L.card.from[3] + L.dash.gapBack) - (L.dash.y + L.dash.windowTop);
+  const backAt = (t) => BACK_DIST * easePan(phase(T.back, t));
 
   // ---------- Drawing ----------
   const canvas = document.getElementById('stage');
@@ -313,31 +318,18 @@
   layer.width = L.size[0]; layer.height = L.size[1];
   const lctx = layer.getContext('2d');
 
-  function drawPan(t) {
-    const u = phase(T.pan, t);
-    const s = panAt(t);
-    const v = Math.abs(panAt(t + 0.004) - panAt(t - 0.004)) / 0.008;   // px per second
-    lctx.setTransform(1, 0, 0, 1, 0, 0);
-    lctx.clearRect(0, 0, layer.width, layer.height);
-
-    // Expanded card: slides up and eases back a touch as it leaves.
-    const [cx0, cy0, cx1, cy1] = L.card.to;
-    const ck = 1 - 0.05 * easePan(u);
+  // Draw an image on the scroll layer, scaled about its own centre.
+  function place(image, x, y, k) {
+    const w = image.width, h = image.height;
     lctx.save();
-    lctx.translate((cx0 + cx1) / 2, (cy0 + cy1) / 2 - s);
-    lctx.scale(ck, ck);
-    lctx.drawImage(img.c2, -(cx1 - cx0) / 2, -(cy1 - cy0) / 2);
+    lctx.translate(x + w / 2, y + h / 2);
+    lctx.scale(k, k);
+    lctx.drawImage(image, -w / 2, -h / 2);
     lctx.restore();
+  }
 
-    // Dashboard: rises from below and grows into place.
-    const dw = img.dash.width, dh = img.dash.height;
-    const dk = 0.93 + 0.07 * easeOpen(clamp01((u - 0.1) / 0.9));
-    lctx.save();
-    lctx.translate(L.dash.x + dw / 2, L.dash.y + dh / 2 + (PAN_DIST - s));
-    lctx.scale(dk, dk);
-    lctx.drawImage(img.dash, -dw / 2, -dh / 2);
-    lctx.restore();
-
+  // Lay the scroll layer down with a vertical motion blur that follows the speed.
+  function blurDown(v) {
     const len = Math.min(16, v / T.fps * 0.38);
     const n = len < 0.6 ? 1 : 9;
     for (let i = 0; i < n; i++) {
@@ -348,12 +340,38 @@
     ctx.globalAlpha = 1;
   }
 
+  // Up: the expanded card leaves the top (easing back a touch) while the
+  // dashboard rises from below and grows into place.
+  function drawPan(t) {
+    const u = phase(T.pan, t), s = panAt(t);
+    lctx.setTransform(1, 0, 0, 1, 0, 0);
+    lctx.clearRect(0, 0, layer.width, layer.height);
+    place(img.c2, L.card.to[0], L.card.to[1] - s, 1 - 0.05 * easePan(u));
+    place(img.dash, L.dash.x, L.dash.y + (PAN_DIST - s), 0.93 + 0.07 * easeOpen(clamp01((u - 0.1) / 0.9)));
+    blurDown(Math.abs(panAt(t + 0.004) - panAt(t - 0.004)) / 0.008);
+  }
+
+  // Down: the mirror of the way up. The dashboard sinks out (easing back) while
+  // the collapsed card comes down from the top and settles on its first spot.
+  function drawBack(t) {
+    const u = phase(T.back, t), s = backAt(t);
+    lctx.setTransform(1, 0, 0, 1, 0, 0);
+    lctx.clearRect(0, 0, layer.width, layer.height);
+    place(img.dash, L.dash.x, L.dash.y + s, 1 - 0.05 * easePan(u));
+    place(img.c1, L.card.from[0], L.card.from[1] - (BACK_DIST - s), 0.93 + 0.07 * easeOpen(clamp01((u - 0.1) / 0.9)));
+    blurDown(Math.abs(backAt(t + 0.004) - backAt(t - 0.004)) / 0.008);
+  }
+
   function renderAt(t) {
     t = ((t % T.duration) + T.duration) % T.duration;
     ctx.setTransform(1, 0, 0, 1, OFFSET[0], OFFSET[1]);
     ctx.clearRect(0, 0, L.size[0], L.size[1]);
     ctx.drawImage(img.bg, L.bgOffset[0], L.bgOffset[1]);   // the one backdrop, always
-    if (t >= T.pan[0]) {
+    if (t >= T.back[0] + T.back[1]) {
+      ctx.drawImage(img.c1, L.card.from[0], L.card.from[1]);   // home again: same as the first frame
+    } else if (t >= T.back[0]) {
+      drawBack(t);
+    } else if (t >= T.pan[0]) {
       drawPan(t);
     } else {
       const p = progress(t);

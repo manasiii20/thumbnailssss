@@ -142,8 +142,10 @@ layout = {
     "card": {"color": "#333333", "radius": CARD_RADIUS, "from": CARD_FROM, "to": CARD_TO},
     # Dashboard resting position (top-left of dashboard.png) in the final frame,
     # and the gap between the expanded card's bottom and the dashboard window's
-    # top while they scroll up together (from the mid-way reference frame).
-    "dash": {"x": 15, "y": 69, "windowTop": 3, "gap": 202},
+    # top while they scroll up together (from the mid-way reference frame), and
+    # between the collapsed card's bottom and the window's top on the way back
+    # down (from the return storyboard).
+    "dash": {"x": 15, "y": 69, "windowTop": 3, "gap": 202, "gapBack": 400},
     "pill": {"color": "#262626", "from": [259, 263, 456, 305, 10], "to": [265, 118, 500, 164, 11]},
     # Elements present in both frames: they glide from one box to the other,
     # cross-fading frame-1 pixels into frame-2 pixels. Drawn with "lighten".
