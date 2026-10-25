@@ -110,10 +110,40 @@ Image.fromarray(f1).save(OUT / "f1.png")
 Image.fromarray(f2).save(OUT / "f2.png")
 Image.fromarray(f2new).save(OUT / "f2new.png")
 
+# The backdrop is the separate gradient export (959 wide; it lines up with the
+# frames 1 px in). The resting cards are cut out of their frames along the
+# card's rounded edge, so they always sit on this one backdrop.
+Image.open(SRC / "00-gradient.webp").convert("RGB").save(OUT / "bg.png")
+CARD_RADIUS = 22
+CARD_FROM = [232, 244, 728, 389]
+CARD_TO = [232, 87, 728, 546]
+
+
+def card_cutout(frame, box, name, ss=4):
+    x0, y0, x1, y1 = box
+    big = Image.new("L", ((x1 - x0) * ss, (y1 - y0) * ss), 0)
+    ImageDraw.Draw(big).rounded_rectangle(
+        (0.4 * ss, 0.4 * ss, (x1 - x0 - 0.4) * ss, (y1 - y0 - 0.4) * ss), radius=CARD_RADIUS * ss, fill=255
+    )
+    m = np.asarray(big.resize((x1 - x0, y1 - y0), Image.LANCZOS)).astype(float) / 255
+    rgba(frame[y0:y1, x0:x1], m).save(OUT / f"{name}.png")
+
+
+card_cutout(f1, CARD_FROM, "c1")
+card_cutout(f2, CARD_TO, "c2")
+
+# The dashboard window, with its own shadow, exactly as exported.
+Image.open(SRC / "03-dashboard.png").convert("RGBA").save(OUT / "dash.png")
+
 # Layout: boxes are [x0, y0, x1, y1] in source pixels.
 layout = {
     "size": [961, 634],
-    "card": {"color": "#333333", "radius": 22, "from": [232, 244, 728, 389], "to": [232, 87, 728, 546]},
+    "bgOffset": [1, 0],
+    "card": {"color": "#333333", "radius": CARD_RADIUS, "from": CARD_FROM, "to": CARD_TO},
+    # Dashboard resting position (top-left of dashboard.png) in the final frame,
+    # and the gap between the expanded card's bottom and the dashboard window's
+    # top while they scroll up together (from the mid-way reference frame).
+    "dash": {"x": 15, "y": 69, "windowTop": 3, "gap": 202},
     "pill": {"color": "#262626", "from": [259, 263, 456, 305, 10], "to": [265, 118, 500, 164, 11]},
     # Elements present in both frames: they glide from one box to the other,
     # cross-fading frame-1 pixels into frame-2 pixels. Drawn with "lighten".

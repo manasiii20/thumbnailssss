@@ -1,6 +1,6 @@
 // Renders the Comma show reel to MP4 with headless Chromium + ffmpeg.
 //
-//   node comma/render.mjs            # comma/exports/comma-system-design@2x.mp4 (958 x 632)
+//   node comma/render.mjs            # comma/exports/comma-show-reel@2x.mp4 (958 x 632)
 //
 // Needs: ffmpeg on PATH, and Playwright (npm install).
 import { chromium } from 'playwright';
@@ -22,7 +22,7 @@ await page.evaluate(() => window.anim.ready);
 const { duration, fps } = await page.evaluate(() => { window.anim.exportMode(true); return window.anim.timeline; });
 const frames = Math.round(duration * fps);
 
-const file = join(outDir, 'comma-system-design@2x.mp4');
+const file = join(outDir, 'comma-show-reel@2x.mp4');
 const ff = spawn('ffmpeg', [
   '-y', '-loglevel', 'error',
   '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(fps), '-i', '-',
