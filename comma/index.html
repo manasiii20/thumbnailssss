@@ -119,7 +119,7 @@
     back: [4.75, 1.3],       // dashboard drops away, the collapsed card comes down from the top
   };
   const CURSOR_START = [1010, 300];   // just off the right edge, centre height
-  const CURSOR_CLICK = [392, 290];    // on the "System Design" pill
+  const CURSOR_CLICK = [352, 321];    // on the card, in the gap under the "System Design" pill
   const CURSOR_CURVE = [700, 372];    // pulls the path into a gentle arc
   const CURSOR_END = [1020, 410];
 
@@ -303,7 +303,7 @@
     const e = 1 - Math.pow(1 - u, 3);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(CURSOR_CLICK[0], CURSOR_CLICK[1], 6 + 30 * e, 0, Math.PI * 2);
+    ctx.arc(CURSOR_CLICK[0], CURSOR_CLICK[1], 5 + 22 * e, 0, Math.PI * 2);
     ctx.lineWidth = 3 * (1 - u) + 0.5;
     ctx.strokeStyle = `rgba(255,255,255,${0.55 * (1 - u)})`;
     ctx.stroke();
@@ -329,15 +329,23 @@
   }
 
   // Lay the scroll layer down with a vertical motion blur that follows the speed.
+  // The copies are summed with "lighter" at 1/n each, a true average, so
+  // soft edges like the dashboard's shadow keep their exact opacity.
+  const blurLayer = document.createElement('canvas');
+  blurLayer.width = L.size[0]; blurLayer.height = L.size[1];
+  const bctx = blurLayer.getContext('2d');
   function blurDown(v) {
     const len = Math.min(16, v / T.fps * 0.38);
-    const n = len < 0.6 ? 1 : 9;
-    for (let i = 0; i < n; i++) {
-      const off = n === 1 ? 0 : (i / (n - 1) - 0.5) * len;
-      ctx.globalAlpha = 1 / (i + 1);
-      ctx.drawImage(layer, 0, off);
-    }
-    ctx.globalAlpha = 1;
+    if (len < 0.15) { ctx.drawImage(layer, 0, 0); return; }
+    const n = 9;
+    bctx.setTransform(1, 0, 0, 1, 0, 0);
+    bctx.globalCompositeOperation = 'source-over';
+    bctx.globalAlpha = 1;
+    bctx.clearRect(0, 0, blurLayer.width, blurLayer.height);
+    bctx.globalCompositeOperation = 'lighter';
+    bctx.globalAlpha = 1 / n;
+    for (let i = 0; i < n; i++) bctx.drawImage(layer, 0, (i / (n - 1) - 0.5) * len);
+    ctx.drawImage(blurLayer, 0, 0);
   }
 
   // Up: the expanded card leaves the top (easing back a touch) while the

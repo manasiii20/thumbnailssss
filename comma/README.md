@@ -5,7 +5,7 @@
 | Time | What happens |
 | --- | --- |
 | 0 – 0.85 s | The cursor glides in from the right, at about centre height, onto the **System Design** pill |
-| 0.85 s | Click: the cursor squeezes and a soft ring spreads from the click point |
+| 0.85 s | Click, in the grey gap just under the pill: the cursor squeezes and a soft ring spreads from the click point |
 | 0.93 – 1.38 s | The card morphs open into the expanded card |
 | 1.5 – 1.95 s | The cursor leaves off the right edge |
 | 1.95 – 2.3 s | The expanded card holds |
@@ -17,7 +17,8 @@
 | File | What it is |
 | --- | --- |
 | `source/` | Your frames: gradient, collapsed card, expanded card, dashboard, plus reference frames for the scroll |
-| `exports/comma-show-reel@2x.mp4` | The rendered video |
+| `exports/comma-show-reel@2x.mp4` | The rendered loop, one play (6.25 s) |
+| `exports/comma-show-reel-x2@2x.mp4` | The same loop played twice (12.5 s) |
 | `index.html` | Live preview with a scrubber and an **Export MP4 loop** button |
 
 ## How it's built
@@ -34,6 +35,7 @@
 ```sh
 python3 comma/extract.py      # after changing a source image
 node comma/render.mjs         # needs ffmpeg + Playwright
+ffmpeg -stream_loop 1 -i comma/exports/comma-show-reel@2x.mp4 -c copy comma/exports/comma-show-reel-x2@2x.mp4
 ```
 
 Timings and the cursor path are at the top of the script in `index.html`. Element boxes and positions are in `extract.py`.
