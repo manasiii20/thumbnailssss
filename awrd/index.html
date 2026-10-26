@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Are We Really Deciding Reel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  :root { --bg: #f3f1f0; --panel: #fff; --ink: #1d1a18; --muted: #6f6a66; --line: #e4e0dc; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #191716; --panel: #221f1d; --ink: #eeeae6; --muted: #a39d98; --line: #36312d; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #191716; --panel: #221f1d; --ink: #eeeae6; --muted: #a39d98; --line: #36312d; color-scheme: dark; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 ui-sans-serif, system-ui, sans-serif; }
+  main { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-block: 40px;
+         padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  #stage { width: 482px; max-width: 100%; height: auto; aspect-ratio: 482 / 326; display: block;
+           box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 32px rgba(60,20,10,.12); }
+  .bar { display: flex; gap: 10px; align-items: center; width: 482px; max-width: 100%; }
+  input[type=range] { flex: 1; accent-color: #d33c27; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #d33c27; outline-offset: 2px; }
+  .meta { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="stage" width="964" height="652"></canvas>
+  <div class="bar">
+    <button id="play">Pause</button>
+    <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Scrub">
+  </div>
+  <div class="meta" id="meta">482 × 326 · 2x</div>
+</main>
+
+<script src="assets/embedded.js"></script>
+<script>
+(() => {
+  const A = window.AWRD;
+  const W = 964, H = 652;
+  const RED = '#d33c27';
+
+  // ---------------- timeline (seconds) ----------------
+  const T = { duration: 10.8, fps: 60 };
+  const Q1 = 'so, do you think', Q2 = 'about your thinking?', MEET = 'meet your work biases!';
+  const SEARCH = 'decision sprint | Miroverse';
+  const t = {
+    q1: 0.35, qStep: 0.045, q2gap: 0.1,                // question types out
+    drop0: 2.25, drop0Dur: 0.55,                       // first character drops in, pushes text down
+    sink: 3.15, sinkDur: 0.6,                          // character sinks to the row, text leaves at the bottom
+    others: 3.6, othersGap: 0.1, othersDur: 0.55,      // four more characters drop in
+    meet: 4.65, meetStep: 0.042,                       // "meet your work biases!" types out
+    lift: 6.05, liftDur: 0.55, back: 6.05, backStep: 0.024,   // characters rise, text backspaces
+    bar: 6.65, barDur: 0.42,                           // search bar appears
+    search: 7.15, searchStep: 0.048,                   // query types out
+    page: 8.85, pageDur: 0.7,                          // Miroverse page slides up
+  };
+  t.q2 = t.q1 + Q1.length * t.qStep + t.q2gap;
+  t.qEnd = t.q2 + Q2.length * t.qStep;
+  t.meetEnd = t.meet + MEET.length * t.meetStep;
+  t.searchEnd = t.search + SEARCH.length * t.searchStep;
+
+  // ---------------- layout (2x px, from the design frames) ----------------
+  const CELL = 17.75;                  // monospace advance of the lettering
+  const Q_POS = [100, 284], Q_X0 = 6;  // sprite origin; first cell starts 6 px in
+  const Q_SPLIT = 40;                  // sprite rows above this are line 1
+  const MEET_POS = [100, 420], MEET_X0 = 6;
+  const ROW_Y = 221;                   // characters' row (frame 3)
+  const CHAR_X = [110, 283, 452, 616, 766];
+  const PUSH = 44;                     // text pushed down by the first character (frame 2)
+  const PERCH = 73;                    // first character sits this much higher in frame 2
+  const LIFT = 62;
+  const BAR = { x: 114, w: 740, h: 76, y: 356 };
+
+  // ---------------- easing ----------------
+  const clamp = (x) => Math.max(0, Math.min(1, x));
+  const ph = (s, d, x) => clamp((x - s) / d);
+  const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+  const easeIn = (x) => x * x * x;
+  const easeInOut = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const easeBack = (x) => { const c1 = 0.9, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+
+  const canvas = document.getElementById('stage');
+  const ctx = canvas.getContext('2d');
+  const img = {};
+
+  function frame() {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgb(248,226,223)';                       // the five pale guide lines
+    for (const x of [159, 321, 481, 641, 803]) ctx.fillRect(x, 0, 1.5, H);
+  }
+  function border() {
+    ctx.strokeStyle = 'rgba(211,60,39,0.55)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, W - 2, H - 2);
+  }
+
+  // Draw the first n characters of a monospace sprite line.
+  function typed(im, pos, x0, rows, n, dy = 0) {
+    if (n <= 0) return 0;
+    const w = Math.min(im.width, x0 + n * CELL + 1);
+    const [r0, r1] = rows;
+    ctx.drawImage(im, 0, r0, w, r1 - r0, pos[0], pos[1] + r0 + dy, w, r1 - r0);
+    return pos[0] + x0 + n * CELL;
+  }
+  function caret(x, y, h, color, now, solidUntil) {
+    const on = now < solidUntil || Math.floor((now - solidUntil) / 0.4) % 2 === 0;
+    if (!on) return;
+    ctx.fillStyle = color;
+    ctx.fillRect(x + 2, y, 2.5, h);
+  }
+  const count = (start, step, len, now) => Math.max(0, Math.min(len, Math.floor((now - start) / step) + 1));
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+
+  function searchBar(now) {
+    const a = easeOut(ph(t.bar, t.barDur, now));
+    if (a <= 0) return;
+    const k = 0.94 + 0.06 * a, cx = BAR.x + BAR.w / 2, cy = BAR.y + BAR.h / 2 + (1 - a) * 16;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-BAR.w / 2, -BAR.h / 2);
+    ctx.shadowColor = 'rgba(0,0,0,0.28)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
+    roundRect(0, 0, BAR.w, BAR.h, BAR.h / 2);
+    ctx.fillStyle = '#303134'; ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1.5; ctx.strokeStyle = '#5f6368'; ctx.stroke();
+    // magnifier
+    ctx.strokeStyle = '#9aa0a6'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(40, BAR.h / 2 - 3, 10.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(48, BAR.h / 2 + 5); ctx.lineTo(56, BAR.h / 2 + 13); ctx.stroke();
+    // microphone (Google colours)
+    const mx = BAR.w - 92, my = BAR.h / 2;
+    ctx.fillStyle = '#4285f4'; roundRect(mx - 6, my - 17, 12, 22, 6); ctx.fill();
+    ctx.strokeStyle = '#34a853'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(mx, my - 4, 11, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    ctx.strokeStyle = '#fbbc04'; ctx.beginPath(); ctx.moveTo(mx, my + 7); ctx.lineTo(mx, my + 14); ctx.stroke();
+    ctx.strokeStyle = '#ea4335'; ctx.beginPath(); ctx.moveTo(mx - 6, my + 15); ctx.lineTo(mx + 6, my + 15); ctx.stroke();
+    // lens
+    const lx = BAR.w - 44;
+    ctx.strokeStyle = '#8ab4f8'; ctx.lineWidth = 3;
+    roundRect(lx - 13, my - 13, 26, 26, 7); ctx.stroke();
+    ctx.fillStyle = '#8ab4f8'; ctx.beginPath(); ctx.arc(lx, my, 5, 0, Math.PI * 2); ctx.fill();
+    // query
+    const n = count(t.search, t.searchStep, SEARCH.length, now);
+    ctx.font = '400 27px Roboto, Arial, sans-serif';
+    ctx.fillStyle = '#e8eaed'; ctx.textBaseline = 'middle';
+    const s = now >= t.search ? SEARCH.slice(0, n) : '';
+    ctx.fillText(s, 76, BAR.h / 2 + 1);
+    const cw = ctx.measureText(s).width;
+    if (now >= t.bar + t.barDur * 0.6 && now < t.page) {
+      const on = now < t.searchEnd || Math.floor((now - t.searchEnd) / 0.4) % 2 === 0;
+      if (on) { ctx.fillStyle = '#e8eaed'; ctx.fillRect(78 + cw, BAR.h / 2 - 15, 2.2, 30); }
+    }
+    ctx.restore();
+  }
+
+  function page(now) {
+    const a = ph(t.page, t.pageDur, now);
+    if (a <= 0) return;
+    const e = easeOut(a);
+    const im = img.template;
+    // Cover the frame: dark page colour, screenshot scaled so the title and
+    // the "Use template" button both stay in view, board running to the bottom.
+    const zoom = 0.72 + 0.03 * easeInOut(ph(t.page + t.pageDur, T.duration - t.page - t.pageDur, now));
+    const w = im.width * zoom, h = im.height * zoom;
+    const y0 = (1 - e) * H;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, y0, W, H); ctx.clip();
+    ctx.fillStyle = 'rgb(28,28,30)'; ctx.fillRect(0, y0, W, H);
+    ctx.drawImage(im, -70 * zoom / 0.72, y0 + H - h + 6, w, h);
+    ctx.restore();
+  }
+
+  function renderAt(now) {
+    frame();
+
+    // ---- question ----
+    const push = PUSH * easeOut(ph(t.drop0 + 0.12, 0.3, now));   // moves aside as the character lands
+    const leave = 460 * easeIn(ph(t.sink, t.sinkDur * 0.9, now));
+    const qdy = push + leave;
+    if (now < t.sink + t.sinkDur) {
+      const n1 = count(t.q1, t.qStep, Q1.length, now);
+      const n2 = now >= t.q2 ? count(t.q2, t.qStep, Q2.length, now) : 0;
+      const qi = img['q-text'];
+      const x1 = typed(qi, Q_POS, Q_X0, [0, Q_SPLIT], now >= t.q1 ? n1 : 0, qdy);
+      const x2 = typed(qi, Q_POS, Q_X0, [Q_SPLIT, qi.height], n2, qdy);
+      if (now >= t.q1 - 0.2 && now < t.drop0 + 0.4) {
+        if (n2 > 0) caret(x2, Q_POS[1] + 44 + qdy, 30, RED, now, t.qEnd);
+        else caret(now >= t.q1 ? x1 : Q_POS[0] + Q_X0 - 2, Q_POS[1] + 4 + qdy, 30, RED, now, t.q2);
+      }
+    }
+
+    // ---- characters ----
+    const lift = LIFT * easeInOut(ph(t.lift, t.liftDur, now));
+    for (let i = 0; i < 5; i++) {
+      const im = img['char-' + i];
+      let y;
+      if (i === 0) {
+        if (now < t.drop0) continue;
+        const perch = ROW_Y - PERCH;
+        y = -im.height + (perch + im.height) * easeBack(ph(t.drop0, t.drop0Dur, now));
+        y += PERCH * easeInOut(ph(t.sink, t.sinkDur, now));
+      } else {
+        const s = t.others + (i - 1) * t.othersGap;
+        if (now < s) continue;
+        y = -im.height + (ROW_Y + im.height) * easeBack(ph(s, t.othersDur, now));
+      }
+      ctx.drawImage(im, CHAR_X[i], y - lift);
+    }
+
+    // ---- meet your work biases ----
+    if (now >= t.meet - 0.2) {
+      const typedN = count(t.meet, t.meetStep, MEET.length, now);
+      const backN = now >= t.back ? Math.min(MEET.length, Math.floor((now - t.back) / t.backStep) + 1) : 0;
+      const n = Math.max(0, (now >= t.meet ? typedN : 0) - backN);
+      const mi = img['meet-text'];
+      const x = typed(mi, MEET_POS, MEET_X0, [0, mi.height], n);
+      if (now < t.back + MEET.length * t.backStep + 0.25) {
+        caret(n > 0 ? x : MEET_POS[0] + MEET_X0 - 2, MEET_POS[1] + 6, 30, RED, now, now < t.back ? t.meetEnd : 1e9);
+      }
+    }
+
+    searchBar(now);
+    page(now);
+    border();
+  }
+
+  function readPixels() {
+    const d = ctx.getImageData(0, 0, W, H).data;
+    let s = '';
+    for (let i = 0; i < d.length; i += 0x8000) s += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+
+  const font = new FontFace('Roboto', `url(${A.roboto})`);
+  const ready = Promise.all([
+    font.load().then((f) => document.fonts.add(f)),
+    ...Object.keys(A).filter((k) => k !== 'roboto').map((k) => new Promise((res, rej) => {
+      const im = new Image(); im.onload = () => { img[k] = im; res(); }; im.onerror = rej; im.src = A[k];
+    })),
+  ]);
+
+  // ---------------- player ----------------
+  let playing = true, exporting = false, t0 = performance.now(), held = 0;
+  const now = () => (playing ? ((performance.now() - t0) / 1000) % T.duration : held);
+  const $ = (id) => document.getElementById(id);
+  $('play').onclick = () => {
+    if (playing) { held = now(); playing = false; $('play').textContent = 'Play'; }
+    else { t0 = performance.now() - held * 1000; playing = true; $('play').textContent = 'Pause'; }
+  };
+  $('scrub').oninput = (e) => { held = (+e.target.value / 1000) * T.duration; if (playing) $('play').click(); };
+  function tick() {
+    if (!exporting) {
+      const n = now();
+      renderAt(n);
+      $('meta').textContent = `482 × 326 · 2x · ${n.toFixed(2)}s / ${T.duration}s`;
+      if (playing) $('scrub').value = Math.round((n / T.duration) * 1000);
+    }
+    requestAnimationFrame(tick);
+  }
+  window.anim = { ready, renderAt, readPixels, timeline: T, exportMode: (v) => { exporting = v; } };
+  ready.then(() => requestAnimationFrame(tick));
+})();
+</script>
+</body>
+</html>
