@@ -12,9 +12,10 @@
 | 6.05 s | The characters rise; the text backspaces away |
 | 6.65 s | A dark-theme Google search bar appears, as wide as the row of characters |
 | 7.15 – 8.4 s | "decision sprint \| Miroverse" types into it |
-| 8.85 s | The Miroverse Decision Sprint page slides up |
-| 9.5 – 10.3 s | The cursor glides to **Use template** and clicks |
-| 10.5 s | The page slides up and away; the white frame is back |
+| 8.65 s | The bar rises to the top, pushing the characters out of the frame |
+| 8.85 s | The Miroverse Decision Sprint page opens under it as a card |
+| 9.45 – 10.2 s | The cursor glides to **Use template** and clicks |
+| 10.45 s | The bar and the page slide up and away; the white frame is back |
 | 10.95 – 12.6 s | The same search bar returns and types "www.cognitive-bias-in-design" |
 | 12.85 s | The bar rises to the top and the website opens under it in a dark Chrome window |
 | 15.0 s | Everything swipes up off the frame and the loop starts again |

@@ -54,10 +54,11 @@
     lift: 6.05, liftDur: 0.55, back: 6.05, backStep: 0.024,   // characters rise, text backspaces
     bar: 6.65, barDur: 0.42,                           // search bar appears
     search: 7.15, searchStep: 0.048,                   // query types out
-    page: 8.85, pageDur: 0.6,                          // Miroverse page slides up
-    cursorIn: 9.5, cursorDur: 0.75,                    // cursor glides to "Use template"
-    click: 10.28,                                      // press
-    pageOut: 10.5, pageOutDur: 0.5,                    // the page slides up and away
+    rise1: 8.65, rise1Dur: 0.5,                        // bar rises, pushing the characters out the top
+    page: 8.85, pageDur: 0.55,                         // Miroverse page opens under the bar
+    cursorIn: 9.45, cursorDur: 0.7,                    // cursor glides to "Use template"
+    click: 10.2,                                      // press
+    pageOut: 10.45, pageOutDur: 0.5,                   // bar and page slide up and away
     bar2: 10.95, bar2Dur: 0.38,                        // the search bar comes back
     web: 11.3, webStep: 0.045,                         // the website address types out
     rise: 12.85, riseDur: 0.5,                         // bar rises to the top
@@ -162,16 +163,19 @@
   }
   const blink = (now, end) => now < end || Math.floor((now - end) / 0.4) % 2 === 0;
 
+  const BAR2_Y = 288, BAR2_TOP = 67;
   function searchBar(now) {
     const n = count(t.search, t.searchStep, SEARCH.length, now);
     const text = now >= t.search ? SEARCH.slice(0, n) : '';
-    drawBar(BAR.y, easeOut(ph(t.bar, t.barDur, now)), text,
-      now >= t.bar + t.barDur * 0.6 && now < t.page && blink(now, t.searchEnd));
+    const y = BAR.y + (BAR2_TOP - BAR.y) * easeInOut(ph(t.rise1, t.rise1Dur, now))
+            - H * easeInOut(ph(t.pageOut, t.pageOutDur, now));
+    drawBar(y, easeOut(ph(t.bar, t.barDur, now)), text,
+      now >= t.bar + t.barDur * 0.6 && now < t.click && blink(now, t.searchEnd));
   }
 
   // Second search: the website. It types in the middle, rises to the top,
   // and the site opens underneath in a Chrome window (as in the reference).
-  const BAR2_Y = 288, BAR2_TOP = 67, WEB_POS = [43, 173];
+  const WEB_POS = [43, 173];
   function website(now) {
     if (now < t.bar2) return;
     const out = H * easeInOut(ph(t.out, t.outDur, now));
@@ -193,20 +197,29 @@
     }
   }
 
-  const BTN = [898, 76];                     // "Use template" on the page screenshot
+  const CARD = [55, 188];                    // Miroverse page card, under the risen bar
+  const BTN = [852, 251];                    // "Use template" on the card
   const CUR0 = [1010, 300];
 
   function page(now) {
-    const a = ph(t.page, t.pageDur, now);
+    const a = easeOut(ph(t.page, t.pageDur, now));
     if (a <= 0 || now >= t.pageOut + t.pageOutDur) return;
-    const y0 = (1 - easeOut(a)) * H - H * easeInOut(ph(t.pageOut, t.pageOutDur, now));
-    ctx.drawImage(img.page, 0, y0, W, H);       // covers the red border while it is on screen
+    const im = img.page, k = 0.96 + 0.04 * a;
+    const out = H * easeInOut(ph(t.pageOut, t.pageOutDur, now));
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(CARD[0] + im.width / 2, CARD[1] + im.height / 2 + (1 - a) * 40 - out);
+    ctx.scale(k, k);
+    ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
+    ctx.drawImage(im, -im.width / 2, -im.height / 2);
+    ctx.restore();
   }
 
   function cursor(now) {
-    if (now < t.cursorIn || now >= t.pageOut) return;
+    if (now < t.cursorIn || now >= t.pageOut + 0.12) return;
     const u = easeInOut(ph(t.cursorIn, t.cursorDur, now));
-    const x = CUR0[0] + (BTN[0] - CUR0[0]) * u, y = CUR0[1] + (BTN[1] + 4 - CUR0[1]) * u;
+    const drift = -H * easeInOut(ph(t.pageOut, t.pageOutDur, now));
+    const x = CUR0[0] + (BTN[0] - CUR0[0]) * u, y = CUR0[1] + (BTN[1] + 4 - CUR0[1]) * u + drift;
     const press = 1 - 0.16 * (Math.sin(Math.PI * ph(t.click, 0.14, now)));
     const r = ph(t.click + 0.03, 0.4, now);
     if (r > 0 && r < 1) {
@@ -225,7 +238,7 @@
 
   function renderAt(now) {
     frame();
-    const covered = now >= t.page + t.pageDur;     // from here on the earlier scene is under the page / gone
+    const covered = now >= t.pageOut + t.pageOutDur;   // the first scene is fully gone from here
 
     // ---- question ----
     const push = PUSH * easeOut(ph(t.drop0 + 0.12, 0.3, now));   // moves aside as the character lands
@@ -245,7 +258,7 @@
 
     if (!covered) {
     // ---- characters ----
-    const lift = LIFT * easeInOut(ph(t.lift, t.liftDur, now));
+    const lift = LIFT * easeInOut(ph(t.lift, t.liftDur, now)) + 420 * easeIn(ph(t.rise1, t.rise1Dur, now));
     for (let i = 0; i < 5; i++) {
       const im = img['char-' + i];
       let y;
@@ -269,16 +282,16 @@
       const n = Math.max(0, (now >= t.meet ? typedN : 0) - backN);
       const mi = img['meet-text'];
       const x = typed(mi, MEET_POS, MEET_X0, [0, mi.height], n);
-      if (now < t.back + MEET.length * t.backStep + 0.25) {
+      if (now < t.back + MEET.length * t.backStep) {
         caret(n > 0 ? x : MEET_POS[0] + MEET_X0 - 2, MEET_POS[1] + 6, 30, RED, now, now < t.back ? t.meetEnd : 1e9);
       }
     }
 
     searchBar(now);
     }
-    border();
     website(now);
     page(now);
+    border();
     cursor(now);
   }
 
