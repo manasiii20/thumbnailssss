@@ -41,7 +41,7 @@
   const RED = '#d33c27';
 
   // ---------------- timeline (seconds) ----------------
-  const T = { duration: 10.8, fps: 60 };
+  const T = { duration: 15.1, fps: 60 };
   const Q1 = 'so, do you think', Q2 = 'about your thinking?', MEET = 'meet your work biases!';
   const SEARCH = 'decision sprint | Miroverse';
   const t = {
@@ -53,7 +53,12 @@
     lift: 6.05, liftDur: 0.55, back: 6.05, backStep: 0.024,   // characters rise, text backspaces
     bar: 6.65, barDur: 0.42,                           // search bar appears
     search: 7.15, searchStep: 0.048,                   // query types out
-    page: 8.85, pageDur: 0.7,                          // Miroverse page slides up
+    page: 8.85, pageDur: 0.6,                          // Miroverse page slides up
+    cursorIn: 9.5, cursorDur: 0.75,                    // cursor glides to "Use template"
+    click: 10.28,                                      // press
+    open: 10.45, openDur: 0.55,                        // page zooms into the board
+    swipe1: 11.55, swipe2: 12.65, swipeDur: 0.5,       // tour: Day 1 -> Day 2 -> Assess your thinking
+    out: 14.15, outDur: 0.55,                          // everything swipes up; the loop restarts on white
   };
   t.q2 = t.q1 + Q1.length * t.qStep + t.q2gap;
   t.qEnd = t.q2 + Q2.length * t.qStep;
@@ -160,25 +165,65 @@
     ctx.restore();
   }
 
+  const BTN = [898, 76];                     // "Use template" on the page screenshot
+  const CUR0 = [1010, 300];
+
   function page(now) {
     const a = ph(t.page, t.pageDur, now);
-    if (a <= 0) return;
-    const e = easeOut(a);
-    const im = img.template;
-    // Cover the frame: dark page colour, screenshot scaled so the title and
-    // the "Use template" button both stay in view, board running to the bottom.
-    const zoom = 0.72 + 0.03 * easeInOut(ph(t.page + t.pageDur, T.duration - t.page - t.pageDur, now));
-    const w = im.width * zoom, h = im.height * zoom;
-    const y0 = (1 - e) * H;
+    if (a <= 0 || now >= t.open + t.openDur) return;
+    const y0 = (1 - easeOut(a)) * H;
+    // opening: the page zooms towards the button and fades as the board arrives
+    const o = easeInOut(ph(t.open, t.openDur, now));
+    const k = 1 + 0.9 * o;
     ctx.save();
-    ctx.beginPath(); ctx.rect(0, y0, W, H); ctx.clip();
-    ctx.fillStyle = 'rgb(28,28,30)'; ctx.fillRect(0, y0, W, H);
-    ctx.drawImage(im, -70 * zoom / 0.72, y0 + H - h + 6, w, h);
+    ctx.globalAlpha = 1 - o;
+    ctx.translate(BTN[0], y0 + BTN[1]); ctx.scale(k, k); ctx.translate(-BTN[0], -BTN[1]);
+    ctx.drawImage(img.page, 0, 0, W, H);
+    ctx.restore();
+  }
+
+  function board(now) {
+    if (now < t.open) return;
+    const arrive = easeOut(ph(t.open + 0.1, t.openDur, now));
+    const out = H * easeInOut(ph(t.out, t.outDur, now));
+    const s1 = easeInOut(ph(t.swipe1, t.swipeDur, now));
+    const s2 = easeInOut(ph(t.swipe2, t.swipeDur, now));
+    ctx.save();
+    ctx.globalAlpha = arrive;
+    ctx.translate(0, -out);
+    const k = 1.06 - 0.06 * arrive;                // settles in from a slight zoom
+    ctx.translate(W / 2, H / 2); ctx.scale(k, k); ctx.translate(-W / 2, -H / 2);
+    // Day 1 -> Day 2 swipes left; Day 2 -> Assess your thinking swipes up
+    if (s1 < 1) ctx.drawImage(img.board1, -W * s1, 0, W, H);
+    if (s1 > 0 && s2 < 1) ctx.drawImage(img.board2, W * (1 - s1), -H * s2, W, H);
+    if (s2 > 0) ctx.drawImage(img.board3, 0, H * (1 - s2), W, H);
+    ctx.drawImage(img['miro-ui'], 0, 0, W, H);     // Miro's own toolbars stay put
+    ctx.restore();
+  }
+
+  function cursor(now) {
+    if (now < t.cursorIn || now > t.open + 0.25) return;
+    const u = easeInOut(ph(t.cursorIn, t.cursorDur, now));
+    const x = CUR0[0] + (BTN[0] - CUR0[0]) * u, y = CUR0[1] + (BTN[1] + 4 - CUR0[1]) * u;
+    const press = 1 - 0.16 * (Math.sin(Math.PI * ph(t.click, 0.14, now)));
+    const r = ph(t.click + 0.03, 0.4, now);
+    if (r > 0 && r < 1) {
+      ctx.beginPath(); ctx.arc(x, y, 5 + 24 * easeOut(r), 0, Math.PI * 2);
+      ctx.lineWidth = 3 * (1 - r) + 0.5; ctx.strokeStyle = `rgba(255,255,255,${0.7 * (1 - r)})`; ctx.stroke();
+    }
+    const pts = [[0, 0], [0, 16.6], [4.1, 12.9], [6.7, 19], [9.2, 18], [6.7, 12], [11.9, 12]];
+    ctx.save();
+    ctx.translate(x, y); ctx.scale(2 * press, 2 * press);
+    ctx.beginPath(); pts.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath();
+    ctx.shadowColor = 'rgba(0,0,0,0.35)'; ctx.shadowBlur = 3; ctx.shadowOffsetY = 0.8;
+    ctx.lineJoin = 'round'; ctx.lineWidth = 1.5; ctx.strokeStyle = '#fff'; ctx.stroke();
+    ctx.shadowColor = 'transparent'; ctx.fillStyle = '#111'; ctx.fill();
     ctx.restore();
   }
 
   function renderAt(now) {
     frame();
+    const covered = now >= t.page + t.pageDur;     // from here on the earlier scene is under the page
 
     // ---- question ----
     const push = PUSH * easeOut(ph(t.drop0 + 0.12, 0.3, now));   // moves aside as the character lands
@@ -196,6 +241,7 @@
       }
     }
 
+    if (!covered) {
     // ---- characters ----
     const lift = LIFT * easeInOut(ph(t.lift, t.liftDur, now));
     for (let i = 0; i < 5; i++) {
@@ -227,7 +273,10 @@
     }
 
     searchBar(now);
+    }
     page(now);
+    board(now);
+    cursor(now);
     border();
   }
 
