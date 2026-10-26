@@ -1,6 +1,6 @@
 # Are We Really Deciding? reel
 
-482 × 326, rendered at 2x (964 × 652), 60 fps. It's a 15.1 s seamless loop on a white frame with a thin red border and the five pale guide lines from the design.
+482 × 326, rendered at 2x (964 × 652), 60 fps. It's a 15.9 s seamless loop on a white frame with a thin red border and the five pale guide lines from the design.
 
 | Time | What happens |
 | --- | --- |
@@ -14,18 +14,16 @@
 | 7.15 – 8.4 s | "decision sprint \| Miroverse" types into it |
 | 8.85 s | The Miroverse Decision Sprint page slides up |
 | 9.5 – 10.3 s | The cursor glides to **Use template** and clicks |
-| 10.45 s | The page zooms in and the board opens on Day 1 |
-| 11.55 s | The board swipes left to Day 2 |
-| 12.65 s | The board swipes up to Assess your thinking |
-| 14.15 s | Everything swipes up off the frame; the white frame is back, and the loop starts again |
-
-Miro's own toolbars stay fixed while the board swipes underneath them.
+| 10.5 s | The page slides up and away; the white frame is back |
+| 10.95 – 12.6 s | The same search bar returns and types "www.cognitive-bias-in-design" |
+| 12.85 s | The bar rises to the top and the website opens under it in a dark Chrome window |
+| 15.0 s | Everything swipes up off the frame and the loop starts again |
 
 The lettering and the characters are your own pixels, cut from the design frames. Typing reveals the monospace lettering one 17.75 px cell at a time. The search text uses Roboto.
 
 ```sh
 python3 awrd/embed.py      # after changing anything in assets/
-node awrd/render.mjs       # → exports/are-we-really-deciding@2x.mp4 (906 frames)
+node awrd/render.mjs       # → exports/are-we-really-deciding@2x.mp4 (954 frames); `exports/are-we-really-deciding-x2@2x.mp4` plays it twice
 ```
 
 All timings are in the `t` object at the top of the script in `index.html`.

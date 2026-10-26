@@ -41,9 +41,10 @@
   const RED = '#d33c27';
 
   // ---------------- timeline (seconds) ----------------
-  const T = { duration: 15.1, fps: 60 };
+  const T = { duration: 15.9, fps: 60 };
   const Q1 = 'so, do you think', Q2 = 'about your thinking?', MEET = 'meet your work biases!';
   const SEARCH = 'decision sprint | Miroverse';
+  const WEB = 'www.cognitive-bias-in-design';
   const t = {
     q1: 0.35, qStep: 0.045, q2gap: 0.1,                // question types out
     drop0: 2.25, drop0Dur: 0.55,                       // first character drops in, pushes text down
@@ -56,14 +57,18 @@
     page: 8.85, pageDur: 0.6,                          // Miroverse page slides up
     cursorIn: 9.5, cursorDur: 0.75,                    // cursor glides to "Use template"
     click: 10.28,                                      // press
-    open: 10.45, openDur: 0.55,                        // page zooms into the board
-    swipe1: 11.55, swipe2: 12.65, swipeDur: 0.5,       // tour: Day 1 -> Day 2 -> Assess your thinking
-    out: 14.15, outDur: 0.55,                          // everything swipes up; the loop restarts on white
+    pageOut: 10.5, pageOutDur: 0.5,                    // the page slides up and away
+    bar2: 10.95, bar2Dur: 0.38,                        // the search bar comes back
+    web: 11.3, webStep: 0.045,                         // the website address types out
+    rise: 12.85, riseDur: 0.5,                         // bar rises to the top
+    browser: 13.05, browserDur: 0.55,                  // the website opens under it in Chrome
+    out: 15.0, outDur: 0.55,                           // everything swipes up; the loop restarts on white
   };
   t.q2 = t.q1 + Q1.length * t.qStep + t.q2gap;
   t.qEnd = t.q2 + Q2.length * t.qStep;
   t.meetEnd = t.meet + MEET.length * t.meetStep;
   t.searchEnd = t.search + SEARCH.length * t.searchStep;
+  t.webEnd = t.web + WEB.length * t.webStep;
 
   // ---------------- layout (2x px, from the design frames) ----------------
   const CELL = 17.75;                  // monospace advance of the lettering
@@ -123,10 +128,11 @@
     ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
   }
 
-  function searchBar(now) {
-    const a = easeOut(ph(t.bar, t.barDur, now));
+  // The dark Google search bar: drawn at (BAR.x, y), with an appear amount a
+  // (fade, slight scale and rise), the typed text and whether the caret shows.
+  function drawBar(y, a, text, caretOn) {
     if (a <= 0) return;
-    const k = 0.94 + 0.06 * a, cx = BAR.x + BAR.w / 2, cy = BAR.y + BAR.h / 2 + (1 - a) * 16;
+    const k = 0.94 + 0.06 * a, cx = BAR.x + BAR.w / 2, cy = y + BAR.h / 2 + (1 - a) * 16;
     ctx.save();
     ctx.globalAlpha = a;
     ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-BAR.w / 2, -BAR.h / 2);
@@ -135,34 +141,56 @@
     ctx.fillStyle = '#303134'; ctx.fill();
     ctx.shadowColor = 'transparent';
     ctx.lineWidth = 1.5; ctx.strokeStyle = '#5f6368'; ctx.stroke();
-    // magnifier
-    ctx.strokeStyle = '#9aa0a6'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';
+    ctx.strokeStyle = '#9aa0a6'; ctx.lineWidth = 3.2; ctx.lineCap = 'round';          // magnifier
     ctx.beginPath(); ctx.arc(40, BAR.h / 2 - 3, 10.5, 0, Math.PI * 2); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(48, BAR.h / 2 + 5); ctx.lineTo(56, BAR.h / 2 + 13); ctx.stroke();
-    // microphone (Google colours)
-    const mx = BAR.w - 92, my = BAR.h / 2;
+    const mx = BAR.w - 92, my = BAR.h / 2;                                                // microphone
     ctx.fillStyle = '#4285f4'; roundRect(mx - 6, my - 17, 12, 22, 6); ctx.fill();
     ctx.strokeStyle = '#34a853'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(mx, my - 4, 11, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
     ctx.strokeStyle = '#fbbc04'; ctx.beginPath(); ctx.moveTo(mx, my + 7); ctx.lineTo(mx, my + 14); ctx.stroke();
     ctx.strokeStyle = '#ea4335'; ctx.beginPath(); ctx.moveTo(mx - 6, my + 15); ctx.lineTo(mx + 6, my + 15); ctx.stroke();
-    // lens
-    const lx = BAR.w - 44;
+    const lx = BAR.w - 44;                                                                // lens
     ctx.strokeStyle = '#8ab4f8'; ctx.lineWidth = 3;
     roundRect(lx - 13, my - 13, 26, 26, 7); ctx.stroke();
     ctx.fillStyle = '#8ab4f8'; ctx.beginPath(); ctx.arc(lx, my, 5, 0, Math.PI * 2); ctx.fill();
-    // query
-    const n = count(t.search, t.searchStep, SEARCH.length, now);
     ctx.font = '400 27px Roboto, Arial, sans-serif';
     ctx.fillStyle = '#e8eaed'; ctx.textBaseline = 'middle';
-    const s = now >= t.search ? SEARCH.slice(0, n) : '';
-    ctx.fillText(s, 76, BAR.h / 2 + 1);
-    const cw = ctx.measureText(s).width;
-    if (now >= t.bar + t.barDur * 0.6 && now < t.page) {
-      const on = now < t.searchEnd || Math.floor((now - t.searchEnd) / 0.4) % 2 === 0;
-      if (on) { ctx.fillStyle = '#e8eaed'; ctx.fillRect(78 + cw, BAR.h / 2 - 15, 2.2, 30); }
-    }
+    ctx.fillText(text, 76, BAR.h / 2 + 1);
+    if (caretOn) { ctx.fillStyle = '#e8eaed'; ctx.fillRect(78 + ctx.measureText(text).width, BAR.h / 2 - 15, 2.2, 30); }
     ctx.restore();
+  }
+  const blink = (now, end) => now < end || Math.floor((now - end) / 0.4) % 2 === 0;
+
+  function searchBar(now) {
+    const n = count(t.search, t.searchStep, SEARCH.length, now);
+    const text = now >= t.search ? SEARCH.slice(0, n) : '';
+    drawBar(BAR.y, easeOut(ph(t.bar, t.barDur, now)), text,
+      now >= t.bar + t.barDur * 0.6 && now < t.page && blink(now, t.searchEnd));
+  }
+
+  // Second search: the website. It types in the middle, rises to the top,
+  // and the site opens underneath in a Chrome window (as in the reference).
+  const BAR2_Y = 288, BAR2_TOP = 67, WEB_POS = [43, 173];
+  function website(now) {
+    if (now < t.bar2) return;
+    const out = H * easeInOut(ph(t.out, t.outDur, now));
+    const y = BAR2_Y + (BAR2_TOP - BAR2_Y) * easeInOut(ph(t.rise, t.riseDur, now)) - out;
+    const n = count(t.web, t.webStep, WEB.length, now);
+    drawBar(y, easeOut(ph(t.bar2, t.bar2Dur, now)), now >= t.web ? WEB.slice(0, n) : '',
+      now >= t.bar2 + t.bar2Dur * 0.6 && blink(now, t.webEnd));
+    const b = easeOut(ph(t.browser, t.browserDur, now));
+    if (b > 0) {
+      const im = img.website;
+      const k = 0.96 + 0.04 * b;
+      ctx.save();
+      ctx.globalAlpha = b;
+      ctx.translate(WEB_POS[0] + im.width / 2, WEB_POS[1] + im.height / 2 + (1 - b) * 40 - out);
+      ctx.scale(k, k);
+      ctx.shadowColor = 'rgba(0,0,0,0.25)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
+      ctx.drawImage(im, -im.width / 2, -im.height / 2);
+      ctx.restore();
+    }
   }
 
   const BTN = [898, 76];                     // "Use template" on the page screenshot
@@ -170,39 +198,13 @@
 
   function page(now) {
     const a = ph(t.page, t.pageDur, now);
-    if (a <= 0 || now >= t.open + t.openDur) return;
-    const y0 = (1 - easeOut(a)) * H;
-    // opening: the page zooms towards the button and fades as the board arrives
-    const o = easeInOut(ph(t.open, t.openDur, now));
-    const k = 1 + 0.9 * o;
-    ctx.save();
-    ctx.globalAlpha = 1 - o;
-    ctx.translate(BTN[0], y0 + BTN[1]); ctx.scale(k, k); ctx.translate(-BTN[0], -BTN[1]);
-    ctx.drawImage(img.page, 0, 0, W, H);
-    ctx.restore();
-  }
-
-  function board(now) {
-    if (now < t.open) return;
-    const arrive = easeOut(ph(t.open + 0.1, t.openDur, now));
-    const out = H * easeInOut(ph(t.out, t.outDur, now));
-    const s1 = easeInOut(ph(t.swipe1, t.swipeDur, now));
-    const s2 = easeInOut(ph(t.swipe2, t.swipeDur, now));
-    ctx.save();
-    ctx.globalAlpha = arrive;
-    ctx.translate(0, -out);
-    const k = 1.06 - 0.06 * arrive;                // settles in from a slight zoom
-    ctx.translate(W / 2, H / 2); ctx.scale(k, k); ctx.translate(-W / 2, -H / 2);
-    // Day 1 -> Day 2 swipes left; Day 2 -> Assess your thinking swipes up
-    if (s1 < 1) ctx.drawImage(img.board1, -W * s1, 0, W, H);
-    if (s1 > 0 && s2 < 1) ctx.drawImage(img.board2, W * (1 - s1), -H * s2, W, H);
-    if (s2 > 0) ctx.drawImage(img.board3, 0, H * (1 - s2), W, H);
-    ctx.drawImage(img['miro-ui'], 0, 0, W, H);     // Miro's own toolbars stay put
-    ctx.restore();
+    if (a <= 0 || now >= t.pageOut + t.pageOutDur) return;
+    const y0 = (1 - easeOut(a)) * H - H * easeInOut(ph(t.pageOut, t.pageOutDur, now));
+    ctx.drawImage(img.page, 0, y0, W, H);       // covers the red border while it is on screen
   }
 
   function cursor(now) {
-    if (now < t.cursorIn || now > t.open + 0.25) return;
+    if (now < t.cursorIn || now >= t.pageOut) return;
     const u = easeInOut(ph(t.cursorIn, t.cursorDur, now));
     const x = CUR0[0] + (BTN[0] - CUR0[0]) * u, y = CUR0[1] + (BTN[1] + 4 - CUR0[1]) * u;
     const press = 1 - 0.16 * (Math.sin(Math.PI * ph(t.click, 0.14, now)));
@@ -223,7 +225,7 @@
 
   function renderAt(now) {
     frame();
-    const covered = now >= t.page + t.pageDur;     // from here on the earlier scene is under the page
+    const covered = now >= t.page + t.pageDur;     // from here on the earlier scene is under the page / gone
 
     // ---- question ----
     const push = PUSH * easeOut(ph(t.drop0 + 0.12, 0.3, now));   // moves aside as the character lands
@@ -274,10 +276,10 @@
 
     searchBar(now);
     }
-    page(now);
-    board(now);
-    cursor(now);
     border();
+    website(now);
+    page(now);
+    cursor(now);
   }
 
   function readPixels() {
