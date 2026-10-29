@@ -770,7 +770,7 @@
   const wel = mount(main, scrWelcome());
   const wk = wel.k;
   cue(0, 0, () => (S(wel.el).op = 1));
-  cue(0, 0.9, (p) => { const q = E.ui(p); const s = S(main.el); place(s, CX, CY + 60 * (1 - q), 0.95 + 0.05 * q); s.op = q; });
+  cue(0, 1.0, (p) => { const q = E.io(p); const s = S(main.el); place(s, CX, CY + 1100 * (1 - q), 1); s.op = 1; });
   const SPL = { x: 195 - 66, y: 422 - 208, s: 2.2 };
   for (const e of [wk.dot]) base(e, { tx: SPL.x, ty: SPL.y, sc: SPL.s });
   base(wk.tile, { op: 0 });
@@ -920,49 +920,51 @@
   const T_ALX = T_OK + 0.75;
   cue(T_ALX, 0.4, (p) => { const q = E.out(p); const s = S(al.el); s.op = (s.op ?? 1) * (1 - q); if (p >= 1) s.op = 0; });
 
-  // ---------- 5. four more screens side by side ----------
-  const T_SPREAD = T_ALX + 0.25;
-  const SP = { s: 0.8, xs: [372, 764, 1156, 1548], y: 540 };
-  const spreadPhone = (scr, tab) => {
+  // ---------- 5. analysis in two, then sharing and games, side by side ----------
+  const PAIR = { xs: [712, 1208], s: 0.94 };
+  const extra = (scr, tab) => {
     const ph = makePhone();
-    const t = tabbar(ph);
-    if (tab >= 0) { base(t.el, { op: 1 }); base(t.k['on' + tab], { op: 1 }); }
-    const s = mount(ph, scr);
-    base(s.el, { op: 1 });
-    return { ph, scr: s };
+    const t = tabbar(ph); base(t.el, { op: 1 }); base(t.k['on' + tab], { op: 1 });
+    const sc = mount(ph, scr); base(sc.el, { op: 1 });
+    return { ph, k: sc.k };
   };
-  const others = [
-    spreadPhone(scrActivity(ACT.ga), 0),
-    spreadPhone(scrResult(), -1),
-    spreadPhone(scrConsult(), 2),
-  ];
-  // the analysis phone slides to the first slot; the others arrive from the right
-  cue(T_SPREAD, 1.0, (p) => { const q = E.io(p); place(S(main.el), lerp(CX, SP.xs[0], q), CY, lerp(1, SP.s, q)); });
-  others.forEach(({ ph, scr }, j) => {
-    const i = j + 1, t0 = T_SPREAD + 0.1 + j * 0.08;
-    cue(t0, 0.95, (p) => { const q = E.ui(p); const s = S(ph.el); place(s, SP.xs[i] + 260 * (1 - q), SP.y + 24 * (1 - q), SP.s * (0.96 + 0.04 * q)); s.op = clamp(p * 2.2); });
-    const k = scr.k;
-    const items = [k.title, k.see, k.main, k.sc, k.sk, k.r0, k.r1, k.r2, k.r3, k.c1, k.c2, k.tell, k.next, k.d0, k.d1, k.d2, k.d3].filter(Boolean);
-    stagger(items, t0 + 0.25, 0.04, 0.6, 14);
-  });
-  countUp(others[0].scr.k.score, ACT.ga.score, T_SPREAD + 0.5, 1.0);
-  const rk = others[1].scr.k;
-  [['x0', 172], ['x1', 98], ['x2', 144]].forEach(([k, w], i) => { base(rk[k], { w: 0 }); cue(T_SPREAD + 0.6 + i * 0.08, 0.9, (p) => { S(rk[k]).w = w * E.ui(p); S(rk[k + 'l']).op = E.ui(p); }); });
-  countUp(rk.score, 124, T_SPREAD + 0.5, 1.0);
+  const slideIn = (ph, x, t0, d = 1.0) => cue(t0, d, (p) => { const q = E.io(p); const s = S(ph.el); place(s, x + 1100 * (1 - q), CY, PAIR.s); s.op = 1; });
+  const slideOut = (ph, x, t0, d = 0.9) => cue(t0, d, (p) => { const q = E.io(p); const s = S(ph.el); place(s, x - 1100 * q, CY, PAIR.s); if (p >= 1) s.op = 0; });
 
-  // ---------- 6. out ----------
-  const T_END = T_SPREAD + 2.5;
-  [main, ...others.map((o) => o.ph)].forEach((ph, i) => {
-    cue(T_END + i * 0.07, 0.7, (p) => { const q = E.in(p); const s = S(ph.el); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) + 40 * q; });
-  });
+  // pair 1: the analysis phone steps left, the daylight chart slides in beside it
+  const T_P1 = T_ALX + 0.35;
+  cue(T_P1, 1.0, (p) => { const q = E.io(p); place(S(main.el), lerp(CX, PAIR.xs[0], q), CY, lerp(1, PAIR.s, q)); });
+  const day = extra(scrAnalysis(), 1);
+  base(day.k.scroll, { ty: -534 });
+  slideIn(day.ph, PAIR.xs[1], T_P1 + 0.1);
+  DAY.forEach(([, v], i) => { base(day.k['d' + i], { h: 0 }); cue(T_P1 + 0.8 + i * 0.07, 0.9, (p) => (S(day.k['d' + i]).h = v * (210 / 150) * E.ui(p))); });
+  countUp(day.k.avg, 90, T_P1 + 0.8, 1.0);
 
-  const DURATION = Math.ceil((T_END + 0.9) * 10) / 10;
+  // pair 2: both slide out left, sharing and games slide in from the right
+  const T_P2 = T_P1 + 3.2;
+  slideOut(main, PAIR.xs[0], T_P2);
+  slideOut(day.ph, PAIR.xs[1], T_P2 + 0.06);
+  const shr = extra(scrSharing(), 2);
+  const gam = extra(scrActivity(ACT.ga), 0);
+  slideIn(shr.ph, PAIR.xs[0], T_P2 + 0.15);
+  slideIn(gam.ph, PAIR.xs[1], T_P2 + 0.23);
+  [['s0', 62], ['s1', 160], ['s2', 116]].forEach(([k, v], i) => { base(shr.k[k], { h: 0 }); cue(T_P2 + 1.0 + i * 0.1, 0.9, (p) => (S(shr.k[k]).h = v * E.ui(p))); });
+  stagger([gam.k.main, gam.k.sc, gam.k.sk, gam.k.r0, gam.k.r1, gam.k.r2, gam.k.r3], T_P2 + 0.9, 0.06, 0.6, 14);
+  countUp(gam.k.score, ACT.ga.score, T_P2 + 1.0, 1.0);
+
+  // ---------- 6. everything swipes up and away; the start swipes the phone up from below ----------
+  const T_END = T_P2 + 3.4;
+  [shr.ph, gam.ph].forEach((ph, i) => cue(T_END + i * 0.06, 0.85, (p) => { const q = E.in(p); const s = S(ph.el); s.ty = (s.ty ?? 0) - 1150 * q; }));
+
+  const SLOW = 1.25;   // the whole timeline plays this much slower
+  const DURATION = Math.ceil((T_END + 0.95) * SLOW * 10) / 10;
 
   // =====================================================================
   //                         playback & export
   // =====================================================================
   function renderAt(t) {
     FRAME++;
+    t /= SLOW;
     for (const c of cues) {
       if (t < c.t0) continue;
       const el = t - c.t0;

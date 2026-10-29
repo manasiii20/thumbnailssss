@@ -1,17 +1,18 @@
 # Vision Health walkthrough reel
 
-`exports/vision-health-walkthrough.mp4`: 1920 × 1080, 60 fps, 20.1 s. It shows screens only, with no captions or titles. One iPhone, centred, walks through the app in the order of the prototype screen recording. At the end, four phones spread out side by side, in the style of the Claude Design cut.
+`exports/vision-health-walkthrough.mp4`: 1920 × 1080, 60 fps, 30.5 s. It shows screens only. The phone swipes up from the bottom at the start, and everything swipes up and away at the end, so the reel loops smoothly. The whole timeline plays at `SLOW` = 1.25× its scripted speed.
 
-Every screen is rebuilt as real UI (text, buttons, bars, the color wheel), so it stays sharp at full HD. Only the drawn artwork is cut from the captures in `source/`: the activity icons, the smartwatch, the doctor portraits and the Eye Health Education illustrations. All motion settles with the same soft ease. Nothing floats or wobbles.
+Every screen is rebuilt as real UI, so it stays sharp at full HD. Only the drawn artwork is cut from the captures in `source/`.
 
 | Time | What happens |
 | --- | --- |
-| 0 – 2.4 s | The phone rises in on the splash dot. The dot sends out two rings, then becomes the app icon on **Welcome to Vision Health**. Tap **Get Started** |
-| 2.4 – 5.5 s | **Connect your devices**: the orbits flow while it searches, the Noise ColorFit Ultra 3 card slides up, **CONNECT** turns into **✓ CONNECTED**, then **Cool, let’s move forward** |
-| 5.5 – 12.2 s | "Aryan, we know nothing…", then **Okay, I’m ready**. Question 1, the vision number typed in (-0.5 and -0.75, 2 years), then Questions 2 to 5. Each answer is added to the list at the top |
-| 12.2 – 13.6 s | **Summary**: the tab bar slides up and the progress bars fill |
-| 13.6 – 16.5 s | **Analysis**: the activity bars grow, **iPhone is Too Close** turns into **Screen Distance ✓** |
-| 16.5 – 20.1 s | Analysis, Eye Games, Color Match results and Virtual Consultation side by side, then they fade out |
+| 0 – 3 s | The phone swipes up on the splash dot, which becomes the app icon on **Welcome to Vision Health**. Tap **Get Started** |
+| 3 – 7 s | **Connect your devices**: searching, the smartwatch card, **CONNECT** → **✓ CONNECTED**, **Cool, let’s move forward** |
+| 7 – 15 s | "Aryan, we know nothing…", Question 1, the vision number typed in, Questions 2–5 with the answers collecting at the top |
+| 15 – 21 s | **Summary**, then **Analysis** with the screen-distance alert |
+| 21 – 25 s | Analysis steps left and the Time in Daylight chart slides in beside it |
+| 25 – 29 s | Both slide out; **Sharing** and **Eye Games** slide in |
+| 29 – 30.5 s | Everything swipes up and away |
 
 ```sh
 python3 vision/extract.py                    # after changing anything in source/ → assets/*.png + assets/embedded.js
