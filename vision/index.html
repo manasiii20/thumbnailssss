@@ -1,0 +1,1221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vision Health Reel</title>
+<style>
+  :root { --bg: #f1f3f6; --panel: #fff; --ink: #14171c; --muted: #646b78; --line: #dde1e8; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #15171b; --panel: #1f2228; --ink: #e9ecf1; --muted: #9aa1ad; --line: #30343c; color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { --bg: #15171b; --panel: #1f2228; --ink: #e9ecf1; --muted: #9aa1ad; --line: #30343c; color-scheme: dark; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 ui-sans-serif, system-ui, sans-serif; }
+  main { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px 16px; }
+  #frame { width: min(1280px, 100%); aspect-ratio: 16 / 9; position: relative; overflow: hidden;
+           box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 32px rgba(20,40,80,.12); }
+  .bar { display: flex; gap: 10px; align-items: center; width: min(1280px, 100%); }
+  input[type=range] { flex: 1; accent-color: #3d96f2; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 2px solid #3d96f2; outline-offset: 2px; }
+  .meta { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  body.export main { padding: 0; }
+  body.export .bar, body.export .meta { display: none; }
+  body.export #frame { width: 1920px; box-shadow: none; }
+
+  /* ---------- the 1920 x 1080 stage ---------- */
+  #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; overflow: hidden;
+           background: radial-gradient(1100px 760px at 62% 46%, #eef1f7 0%, rgba(238,241,247,0) 70%), linear-gradient(180deg, #e4e8f0 0%, #dce2eb 100%);
+           font-family: Inter, -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif; color: #111; -webkit-font-smoothing: antialiased; }
+  #grain { position: absolute; inset: 0; opacity: .022; mix-blend-mode: multiply; pointer-events: none; }
+  .m { position: absolute; left: 0; top: 0; transform-origin: 50% 50%; }
+
+  /* captions */
+  .cap { position: absolute; left: 438px; top: 0; width: 470px; }
+  .cap .n { font-size: 17px; font-weight: 600; letter-spacing: .14em; color: #3d8fe8; }
+  .cap .h { font-size: 54px; font-weight: 600; letter-spacing: -.025em; line-height: 1.06; color: #12151b; margin-top: 18px; }
+  .cap .d { font-size: 22px; line-height: 1.45; color: #5c6574; margin-top: 20px; letter-spacing: -.005em; }
+  .cap > * { will-change: auto; }
+  .heading { position: absolute; left: 0; width: 1920px; top: 64px; text-align: center; }
+  .heading .n { font-size: 16px; font-weight: 600; letter-spacing: .14em; color: #3d8fe8; }
+  .heading .h { font-size: 40px; font-weight: 600; letter-spacing: -.02em; color: #12151b; margin-top: 10px; }
+
+  /* phone */
+  .phone { position: absolute; left: 0; top: 0; width: 414px; height: 868px; border-radius: 64px; background: #0c0d0f;
+           box-shadow: 0 0 0 1.5px #d4d7dd, 0 0 0 3.5px #a9adb5, 0 0 0 4.5px #8d929b, 0 60px 90px -30px rgba(30,50,90,.32), 0 24px 50px -12px rgba(30,50,90,.20); }
+  .phone .btn-side { position: absolute; width: 4px; background: #9aa0a8; border-radius: 2px; }
+  .screen { position: absolute; left: 12px; top: 12px; width: 390px; height: 844px; border-radius: 52px; overflow: hidden; background: #fff; isolation: isolate; }
+  .island { position: absolute; left: 132px; top: 11px; width: 126px; height: 37px; border-radius: 20px; background: #000; z-index: 80; }
+  .status { position: absolute; left: 0; top: 0; width: 390px; height: 58px; z-index: 70; pointer-events: none; background: linear-gradient(180deg, #fff 0, #fff 50px, rgba(255,255,255,0) 58px); }
+  .status .time { position: absolute; left: 52px; top: 17px; font-size: 16.5px; font-weight: 600; letter-spacing: -.01em; }
+  .status svg { position: absolute; top: 21px; }
+  .homeind { position: absolute; left: 128px; bottom: 8px; width: 134px; height: 5px; border-radius: 3px; background: #111; z-index: 75; }
+  .touch { position: absolute; left: 0; top: 0; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; z-index: 90;
+           background: radial-gradient(circle, rgba(40,44,52,.30) 0%, rgba(40,44,52,.24) 62%, rgba(40,44,52,.10) 100%);
+           box-shadow: 0 0 0 1.5px rgba(255,255,255,.75), 0 4px 10px rgba(0,0,0,.16); }
+
+  .scr { position: absolute; left: 0; top: 0; width: 390px; height: 844px; overflow: hidden; }
+  .a { position: absolute; }
+  .scroll { position: absolute; left: 0; top: 0; width: 390px; }
+
+  /* type */
+  .big { font-size: 28px; font-weight: 600; letter-spacing: -.022em; line-height: 33px; }
+  .ttl { font-size: 27px; font-weight: 600; letter-spacing: -.022em; }
+  .ttl2 { font-size: 25px; font-weight: 600; letter-spacing: -.02em; }
+  .sec { font-size: 20px; font-weight: 600; letter-spacing: -.015em; }
+  .q { font-size: 21.5px; font-weight: 600; letter-spacing: -.017em; line-height: 28px; }
+  .body { font-size: 14.5px; line-height: 18.5px; color: #6c6c72; }
+  .date { font-size: 13px; color: #111; }
+  .link { color: #3a93ef; }
+  .grey { color: #8a8a90; }
+  .red { color: #e0285a; }
+  .blue { color: #3a93ef; }
+
+  /* controls */
+  .btn { display: flex; align-items: center; justify-content: center; border-radius: 12px; background: #48a0f7; color: #fff; font-size: 16px; letter-spacing: -.01em; }
+  .pill { display: flex; align-items: center; justify-content: center; border-radius: 999px; border: 1.3px solid #4aa0f6; color: #3a93ef; font-size: 14px; background: #fff; letter-spacing: -.01em; }
+  .pill.fill { background: #48a0f7; color: #fff; border-color: #48a0f7; }
+  .pill.gry { border-color: #8e8e93; color: #3a3a3c; }
+  .pill.blk { border-color: #9a9aa0; color: #4a4a4f; }
+  .field { display: flex; align-items: center; border-radius: 999px; border: 1.3px solid #a3a3a8; font-size: 13.5px; color: #a7a7ac; padding-left: 28px; box-sizing: border-box; }
+  .field .v { color: #1c1c1e; }
+  .caret { display: inline-block; width: 1.6px; height: 17px; background: #3a93ef; margin-left: 1px; vertical-align: -3px; }
+  .card { background: #f2f2f4; border-radius: 16px; }
+  .tile { background: #fff; border-radius: 12px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .tile img { display: block; }
+  .more { display: flex; align-items: center; justify-content: center; gap: 5px; border-radius: 999px; background: #8cc6fa; color: #fff; font-size: 10.5px; font-weight: 500; letter-spacing: .04em; }
+  .seg { display: flex; align-items: center; background: #ededf0; border-radius: 9px; font-size: 11.5px; color: #222; }
+  .seg div { flex: 1; text-align: center; position: relative; }
+  .seg .on { background: #fff; border-radius: 7px; margin: 2px; padding: 5px 0; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .tabbar { position: absolute; left: 0; top: 786px; width: 390px; height: 58px; background: rgba(248,248,249,.97); border-top: .8px solid #dcdce0; z-index: 50; }
+  .tab { position: absolute; top: 9px; width: 90px; margin-left: -45px; text-align: center; font-size: 9.5px; }
+  .tab svg { display: block; margin: 0 auto 2px; }
+  .tab .on { position: absolute; left: 0; top: 0; width: 90px; color: #3a93ef; }
+  .tab .off { color: #8a8a8e; }
+  .appicon { border-radius: 12px; background: #fff; box-shadow: 0 0 0 1px #e3e3e8; }
+  .dot { border-radius: 50%; background: radial-gradient(circle, #1f86ff 0%, #3b98ff 16%, #74b7ff 30%, #a8d2ff 46%, #d3e8ff 62%, rgba(232,243,255,.6) 74%, rgba(255,255,255,0) 80%); }
+  .ava { border-radius: 50%; background: #c8c8cc; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 400; }
+  .ava.b { background: #8cc6fa; }
+  .barv { position: absolute; bottom: 0; border-radius: 99px; }
+  .row { background: #f2f2f4; border-radius: 14px; }
+  .chev { position: absolute; }
+  .wheel { border-radius: 50%; background: conic-gradient(from 0deg, hsl(120 100% 50%), hsl(60 100% 50%) 60deg, hsl(0 100% 50%) 120deg, hsl(300 100% 50%) 180deg, hsl(240 100% 52%) 240deg, hsl(180 100% 50%) 300deg, hsl(120 100% 50%) 360deg); }
+  .stars { color: #f5b916; font-size: 12px; letter-spacing: 6px; }
+  .book { display: flex; align-items: center; justify-content: center; background: #3d96f2; color: #fff; font-size: 8.5px; letter-spacing: .03em; border-radius: 3px; }
+  .alert { position: absolute; inset: 0; z-index: 60; }
+</style>
+</head>
+<body>
+<main>
+  <div id="frame"><div id="stage"><canvas id="grain" width="480" height="270"></canvas></div></div>
+  <div class="bar">
+    <button id="play">Pause</button>
+    <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Scrub">
+  </div>
+  <div class="meta" id="meta">1920 × 1080 · 60 fps</div>
+</main>
+
+<script src="assets/embedded.js"></script>
+<script>
+(() => {
+  const IMG = window.VH;
+  const stage = document.getElementById('stage');
+
+  // ================= easing =================
+  const clamp = (x) => Math.max(0, Math.min(1, x));
+  const lerp = (a, b, p) => a + (b - a) * p;
+  function bezier(x1, y1, x2, y2) {
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    const X = (t) => ((ax * t + bx) * t + cx) * t, Y = (t) => ((ay * t + by) * t + cy) * t;
+    const dX = (t) => (3 * ax * t + 2 * bx) * t + cx;
+    return (x) => {
+      if (x <= 0) return 0; if (x >= 1) return 1;
+      let t = x;
+      for (let i = 0; i < 8; i++) { const e = X(t) - x; if (Math.abs(e) < 1e-6) break; const d = dX(t); if (Math.abs(d) < 1e-6) break; t -= e / d; }
+      return Y(clamp(t));
+    };
+  }
+  const E = {
+    ui: bezier(0.22, 1, 0.36, 1),        // calm iOS-like settle
+    push: bezier(0.32, 0.72, 0, 1),      // navigation push
+    io: bezier(0.65, 0, 0.35, 1),        // camera / phone moves
+    out: bezier(0.33, 1, 0.68, 1),
+    in: bezier(0.55, 0, 1, 0.45),
+    lin: (x) => x,
+  };
+
+  // ================= tiny DOM helpers =================
+  function el(html) { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; }
+  function refs(root) { const k = {}; root.querySelectorAll('[data-k]').forEach((e) => (k[e.dataset.k] = e)); return k; }
+  const img = (name, w, h) => `<img src="${IMG[name]}" style="width:${w}px;height:${h ?? w}px;object-fit:cover" alt="">`;
+
+  // icons
+  const SVG = {
+    heart: (c) => `<svg width="24" height="22" viewBox="0 0 24 22"><path fill="${c}" d="M12 21.2l-1.5-1.3C5.3 15.2 2 12.2 2 8.3 2 5.1 4.4 2.7 7.5 2.7c1.8 0 3.4.8 4.5 2.1 1.1-1.3 2.7-2.1 4.5-2.1 3.1 0 5.5 2.4 5.5 5.6 0 3.9-3.3 6.9-8.5 11.6L12 21.2z"/></svg>`,
+    bars: (c) => `<svg width="24" height="22" viewBox="0 0 24 22"><rect x="3.5" y="9" width="4.6" height="12" rx="1" fill="${c}"/><rect x="9.7" y="2" width="4.6" height="19" rx="1" fill="${c}"/><rect x="15.9" y="6" width="4.6" height="15" rx="1" fill="${c}"/></svg>`,
+    people: (c) => `<svg width="30" height="22" viewBox="0 0 30 22"><circle cx="9.5" cy="6" r="4.6" fill="${c}"/><path d="M1 21c0-5.2 3.8-8.6 8.5-8.6S18 15.8 18 21z" fill="${c}"/><circle cx="20.5" cy="6" r="4.6" fill="${c}"/><path d="M12 21c0-5.2 3.8-8.6 8.5-8.6S29 15.8 29 21z" fill="${c}"/></svg>`,
+    chev: (c = '#3c3c43', w = 10, h = 17) => `<svg width="${w}" height="${h}" viewBox="0 0 10 17"><path d="M1.5 1.5l7 7-7 7" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    back: `<svg width="9" height="14" viewBox="0 0 9 14"><path d="M7.5 1.5L2 7l5.5 5.5" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    profile: `<svg width="27" height="27" viewBox="0 0 27 27"><circle cx="13.5" cy="13.5" r="12" fill="none" stroke="#3a3a3c" stroke-width="2"/><circle cx="13.5" cy="10.8" r="4.3" fill="none" stroke="#3a3a3c" stroke-width="2"/><path d="M6.2 21.6c1.6-3 4.2-4.6 7.3-4.6s5.7 1.6 7.3 4.6" fill="none" stroke="#3a3a3c" stroke-width="2"/></svg>`,
+    minibars: `<svg width="12" height="11" viewBox="0 0 12 11"><rect x="0" y="5" width="2.6" height="6" fill="#3a3a3c"/><rect x="4.4" y="0" width="2.6" height="11" fill="#3a3a3c"/><rect x="8.8" y="3" width="2.6" height="8" fill="#3a3a3c"/></svg>`,
+    check: (c) => `<svg width="11" height="9" viewBox="0 0 11 9"><path d="M1 4.6l3.2 3.1L10 1.3" fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+    search: `<svg width="16" height="16" viewBox="0 0 16 16"><circle cx="6.8" cy="6.8" r="5.3" fill="none" stroke="#8a8a8e" stroke-width="1.7"/><path d="M10.8 10.8l4 4" stroke="#8a8a8e" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+    mic: `<svg width="12" height="17" viewBox="0 0 12 17"><rect x="3.3" y="0.8" width="5.4" height="10" rx="2.7" fill="#8a8a8e"/><path d="M1 8.2c0 2.8 2.2 5 5 5s5-2.2 5-5M6 13.2v3" fill="none" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round"/></svg>`,
+    share: `<svg width="15" height="18" viewBox="0 0 15 18"><path d="M7.5 1v10M4 4.4l3.5-3.4L11 4.4" fill="none" stroke="#8a8a8e" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 7.5H2v9.5h11V7.5h-3" fill="none" stroke="#8a8a8e" stroke-width="1.4" stroke-linejoin="round"/></svg>`,
+    image: `<svg width="13" height="11" viewBox="0 0 13 11"><rect x=".7" y=".7" width="11.6" height="9.6" rx="1.5" fill="none" stroke="#fff" stroke-width="1.3"/><path d="M2 9l3-3.2 2.2 2.2L9 6l2 3" fill="none" stroke="#fff" stroke-width="1.2"/></svg>`,
+  };
+
+  // ================= animated state =================
+  // Every frame starts from each element's base state; cues (in order) then write on top.
+  const managed = new Map();
+  let FRAME = 0;
+  function base(e, s) { const m = reg(e); Object.assign(m.base, s); return e; }
+  function reg(e) { let m = managed.get(e); if (!m) { m = { base: {}, cur: null, f: -1, last: {} }; managed.set(e, m); } return m; }
+  function S(e) { const m = reg(e); if (m.f !== FRAME) { m.f = FRAME; m.cur = Object.assign({}, m.base); } return m.cur; }
+  function flush() {
+    for (const [e, m] of managed) {
+      const s = m.f === FRAME ? m.cur : m.base;
+      const tx = s.tx ?? 0, ty = s.ty ?? 0, sc = s.sc ?? 1, rot = s.rot ?? 0;
+      const tf = `translate(${tx.toFixed(2)}px,${ty.toFixed(2)}px) scale(${sc.toFixed(4)})` + (rot ? ` rotate(${rot.toFixed(2)}deg)` : '');
+      const op = s.op ?? 1;
+      const out = {
+        transform: tf, opacity: op.toFixed(3), visibility: op <= 0.002 ? 'hidden' : 'visible',
+        filter: s.blur || (s.bright ?? 1) !== 1 ? `blur(${(s.blur || 0).toFixed(2)}px) brightness(${(s.bright ?? 1).toFixed(3)})` : 'none',
+      };
+      if (s.z !== undefined) out.zIndex = String(s.z);
+      if (s.w !== undefined) out.width = s.w.toFixed(2) + 'px';
+      if (s.h !== undefined) out.height = s.h.toFixed(2) + 'px';
+      if (s.bg !== undefined) out.background = s.bg;
+      if (s.shadow !== undefined) out.boxShadow = s.shadow;
+      if (s.clip !== undefined) out.clipPath = s.clip;
+      if (s.css) Object.assign(out, s.css);
+      for (const k in out) if (m.last[k] !== out[k]) { e.style[k] = out[k]; m.last[k] = out[k]; }
+      if (s.txt !== undefined && m.lastTxt !== s.txt) { e.textContent = s.txt; m.lastTxt = s.txt; }
+      if (s.html !== undefined && m.lastHtml !== s.html) { e.innerHTML = s.html; m.lastHtml = s.html; }
+    }
+  }
+  const cues = [];
+  // fn(p, elapsed) runs every frame once t >= t0; p is 0..1 over dur (1 once past).
+  function cue(t0, dur, fn) { cues.push({ t0, dur, fn }); }
+  let zc = 10;
+
+  // ---------- generic moves ----------
+  function fadeUp(e, t0, d = 0.55, dy = 16, ease = E.ui) {
+    base(e, { op: 0 });
+    cue(t0, d, (p) => { const q = ease(p); const s = S(e); s.op = q; s.ty = (s.ty ?? 0) + dy * (1 - q); });
+  }
+  function fadeOut(e, t0, d = 0.35, dy = 0) {
+    cue(t0, d, (p) => { const q = E.out(p); const s = S(e); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) + dy * q; });
+  }
+  function stagger(list, t0, gap = 0.06, d = 0.55, dy = 16) { list.forEach((e, i) => e && fadeUp(e, t0 + i * gap, d, dy)); }
+  function showAt(e, t0) { base(e, { op: 0 }); cue(t0, 0, () => (S(e).op = 1)); }
+  function hideAt(e, t0) { cue(t0, 0, () => (S(e).op = 0)); }
+
+  // ================= stage pieces =================
+  // grain to keep the soft gradient from banding in 8-bit video
+  (() => {
+    const g = document.getElementById('grain'), c = g.getContext('2d'), d = c.createImageData(480, 270);
+    let s = 1234567;
+    for (let i = 0; i < d.data.length; i += 4) { s = (s * 1103515245 + 12345) & 0x7fffffff; const v = 110 + (s % 90); d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+    c.putImageData(d, 0, 0); g.style.width = '1920px'; g.style.height = '1080px'; g.style.imageRendering = 'pixelated';
+  })();
+
+  function makePhone() {
+    const p = el(`<div class="phone m">
+      <div class="btn-side" style="left:-6px;top:170px;height:30px"></div>
+      <div class="btn-side" style="left:-6px;top:225px;height:58px"></div>
+      <div class="btn-side" style="left:-6px;top:295px;height:58px"></div>
+      <div class="btn-side" style="right:-6px;top:250px;height:90px"></div>
+      <div class="screen" data-k="screen">
+        <div class="status"><div class="time">9:41</div>
+          <svg style="left:288px" width="18" height="11" viewBox="0 0 18 11"><rect x="0" y="7" width="3" height="4" rx=".8"/><rect x="5" y="5" width="3" height="6" rx=".8"/><rect x="10" y="2.5" width="3" height="8.5" rx=".8"/><rect x="15" y="0" width="3" height="11" rx=".8"/></svg>
+          <svg style="left:311px" width="16" height="11" viewBox="0 0 16 11"><path d="M8 2.2c2.4 0 4.6.9 6.2 2.5l1.2-1.2C13.5 1.6 10.9.5 8 .5S2.5 1.6.6 3.5l1.2 1.2C3.4 3.1 5.6 2.2 8 2.2zm0 3.4c1.5 0 2.8.6 3.8 1.5L13 5.9C11.7 4.6 9.9 3.9 8 3.9s-3.7.7-5 2l1.2 1.2c1-.9 2.3-1.5 3.8-1.5zM8 9l2-2c-.5-.5-1.2-.8-2-.8s-1.5.3-2 .8z"/></svg>
+          <svg style="left:332px" width="27" height="12" viewBox="0 0 27 12"><rect x=".5" y=".5" width="22" height="11" rx="3.2" fill="none" stroke="#000" opacity=".4"/><rect x="2" y="2" width="19" height="8" rx="2"/><path d="M24 4v4c.8-.3 1.3-1.1 1.3-2S24.8 4.3 24 4z" opacity=".45"/></svg>
+        </div>
+        <div class="island"></div>
+        <div class="homeind"></div>
+        <div class="touch m" data-k="touch"></div>
+      </div>
+    </div>`);
+    stage.appendChild(p);
+    const k = refs(p);
+    base(p, { op: 0 });
+    base(k.touch, { op: 0 });
+    return { el: p, screen: k.screen, touch: k.touch };
+  }
+  // place a phone by its centre on the 1920 x 1080 stage
+  function place(s, cx, cy, sc = 1) { s.tx = cx - 207; s.ty = cy - 434; s.sc = sc; }
+  function mount(phone, scr) { phone.screen.appendChild(scr.el); base(scr.el, { op: 0 }); return scr; }
+
+  function screen(inner, extra = '') { const e = el(`<div class="scr m" ${extra}>${inner}</div>`); return { el: e, k: refs(e) }; }
+
+  // ---------- touches ----------
+  // A soft touch appears at (x, y) on the screen, presses at `at`, lifts and fades.
+  function tap(phone, x, y, at, target) {
+    const tch = phone.touch;
+    cue(at - 0.3, 0.75, (p, el) => {
+      const s = S(tch); const u = el - 0.3;          // seconds relative to the press
+      s.tx = x; s.ty = y;
+      if (u < 0) { const q = E.out(clamp((u + 0.3) / 0.22)); s.op = q; s.sc = 1.25 - 0.25 * q; }
+      else if (u < 0.14) { s.op = 1; s.sc = 1 - 0.16 * E.out(u / 0.14); }
+      else { const q = clamp((u - 0.14) / 0.31); s.op = 1 - E.out(q); s.sc = 0.84 + 0.36 * E.out(q); }
+      if (p >= 1) s.op = 0;
+    });
+    if (target) cue(at, 0.32, (p) => { const k = Math.sin(Math.PI * p); const s = S(target); s.sc = (s.sc ?? 1) * (1 - 0.035 * k); s.bright = (s.bright ?? 1) * (1 - 0.07 * k); });
+  }
+
+  // ---------- screen transitions ----------
+  function push(from, to, t0, d = 0.6) {
+    const z = ++zc;
+    cue(t0, d, (p) => {
+      const q = E.push(p);
+      const a = S(to); a.op = 1; a.tx = 390 * (1 - q); a.z = z; a.bg = '#fff';
+      a.shadow = p < 1 ? `-10px 0 30px rgba(0,0,0,${(0.10 * (1 - q)).toFixed(3)})` : 'none';
+      if (from) { const b = S(from); b.tx = -110 * q; b.bright = 1 - 0.05 * Math.sin(Math.PI * Math.min(1, p * 1.1)); if (p >= 1) b.op = 0; }
+    });
+  }
+  // old content drifts up and fades, the new screen rises in behind it
+  function rise(from, to, t0, d = 0.6, dist = 26) {
+    const z = ++zc;
+    if (from) cue(t0, d * 0.6, (p) => { const q = E.out(p); const b = S(from); b.op = (b.op ?? 1) * (1 - q); b.ty = (b.ty ?? 0) - dist * 0.7 * q; if (p >= 1) b.op = 0; });
+    cue(t0 + d * 0.25, d, (p) => { const q = E.ui(p); const a = S(to); a.op = q; a.ty = dist * (1 - q); a.z = z; });
+  }
+  function xfade(from, to, t0, d = 0.32, dy = 8) {
+    const z = ++zc;
+    if (from) cue(t0, d * 0.8, (p) => { const b = S(from); b.op = (b.op ?? 1) * (1 - E.out(p)); if (p >= 1) b.op = 0; });
+    cue(t0 + d * 0.2, d, (p) => { const q = E.ui(p); const a = S(to); a.op = q; a.ty = dy * (1 - q); a.z = z; });
+  }
+
+  // ---------- typing ----------
+  function typeInto(field, str, t0, step = 0.07) {
+    const k = refs(field);
+    base(k.v, { txt: '' }); base(k.ph, { op: 1 }); base(k.caret, { op: 0 });
+    cue(t0 - 0.3, str.length * step + 1.0, (p, el) => {
+      const u = el - 0.3;
+      const n = Math.max(0, Math.min(str.length, Math.floor(u / step + 1e-6) + (u >= 0 ? 1 : 0)));
+      S(k.v).txt = str.slice(0, n);
+      S(k.ph).op = n > 0 ? 0 : 1;
+      const typing = u >= 0 && u < str.length * step;
+      S(k.caret).op = p >= 1 ? 0 : (typing ? 1 : (Math.floor((el + 10) / 0.5) % 2 === 0 ? 1 : 0));
+    });
+    cue(t0 + str.length * step + 0.7, 0, () => { S(k.v).txt = str; S(k.ph).op = 0; S(k.caret).op = 0; });
+  }
+  const field = (x, y, w, ph, h = 43) => `<div class="a field" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px"><span data-k="ph" class="m" style="position:absolute;left:28px;top:${(h - 18) / 2}px">${ph}</span><span class="v" data-k="v"></span><span class="caret" data-k="caret" style="opacity:0"></span></div>`;
+
+  // ---------- counting ----------
+  function countUp(e, to, t0, d = 0.9, fmt = (v) => String(Math.round(v))) {
+    base(e, { txt: fmt(0) });
+    cue(t0, d, (p) => (S(e).txt = fmt(to * E.out(p))));
+  }
+
+  // ================= screens =================
+  const W = 390;
+
+  // ---- Welcome (with the splash dot that becomes its icon) ----
+  function scrWelcome() {
+    return screen(`
+      <div class="a appicon" data-k="tile" style="left:40px;top:182px;width:52px;height:52px"></div>
+      <div class="a" data-k="ring1" style="left:66px;top:208px;width:0;height:0"><div style="position:absolute;left:-60px;top:-60px;width:120px;height:120px;border-radius:50%;border:1.5px solid #8ec3ff"></div></div>
+      <div class="a" data-k="ring2" style="left:66px;top:208px;width:0;height:0"><div style="position:absolute;left:-60px;top:-60px;width:120px;height:120px;border-radius:50%;border:1.5px solid #8ec3ff"></div></div>
+      <div class="a dot" data-k="dot" style="left:46px;top:188px;width:40px;height:40px"></div>
+      <div class="a big" data-k="title" style="left:40px;top:252px">Welcome to<br>Vision Health</div>
+      <div class="a body" data-k="body" style="left:40px;top:340px;width:300px">Vision Health is an iOS-supported app dedicated to eye health, serving as a third-party extension for Apple Health.</div>
+      <div class="a btn" data-k="go" style="left:24px;top:689px;width:342px;height:48px">Get Started</div>
+      <div class="a link" data-k="sign" style="left:0;top:760px;width:390px;text-align:center;font-size:16px">Sign in as aryanarora@icloud.com</div>`);
+  }
+
+  // ---- Connect devices ----
+  function illustration() {
+    return `<svg width="300" height="250" viewBox="0 0 300 250" style="overflow:visible">
+      <defs>
+        <linearGradient id="gPh" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stop-color="#cfe0fd"/><stop offset="1" stop-color="#6e98ee"/></linearGradient>
+        <linearGradient id="gWa" x1="0" y1="0" x2="0.5" y2="1"><stop offset="0" stop-color="#bcd4fc"/><stop offset="1" stop-color="#6d97ee"/></linearGradient>
+      </defs>
+      <g fill="none" stroke="#86b0f3" stroke-width="3" stroke-dasharray="15 9" stroke-linecap="round">
+        <ellipse data-k="o1" cx="152" cy="42" rx="52" ry="36" transform="rotate(-24 152 42)"/>
+        <ellipse data-k="o2" cx="58" cy="128" rx="46" ry="26" transform="rotate(-8 58 128)"/>
+        <ellipse data-k="o3" cx="186" cy="132" rx="58" ry="30" transform="rotate(-14 186 132)"/>
+        <ellipse data-k="o4" cx="212" cy="204" rx="74" ry="36" transform="rotate(-12 212 204)"/>
+      </g>
+      <g data-k="ph">
+        <g transform="rotate(-17 92 120)">
+          <rect x="54" y="46" width="78" height="150" rx="12" fill="#f4f6fb" stroke="#1d1d1f" stroke-width="1.6"/>
+          <rect x="60" y="50" width="74" height="146" rx="11" fill="url(#gPh)" stroke="#1d1d1f" stroke-width="1.6"/>
+        </g>
+      </g>
+      <g data-k="wa">
+        <g transform="rotate(-6 214 160)">
+          <path d="M196 112c0-6 4-10 10-10h18c6 0 10 4 10 10v14h-38z" fill="#fff" stroke="#1d1d1f" stroke-width="1.5"/>
+          <path d="M196 194c0 6 4 10 10 10h18c6 0 10-4 10-10v-14h-38z" fill="#fff" stroke="#1d1d1f" stroke-width="1.5"/>
+          <g stroke="#1d1d1f" stroke-width="1.2"><path d="M204 186v8M210 186v10M216 186v10M222 186v10M228 186v8"/></g>
+          <rect x="186" y="122" width="56" height="62" rx="13" fill="#fff" stroke="#1d1d1f" stroke-width="1.6"/>
+          <rect x="192" y="128" width="44" height="50" rx="9" fill="url(#gWa)" stroke="#1d1d1f" stroke-width="1.2"/>
+          <rect x="241" y="140" width="5" height="11" rx="2" fill="#fff" stroke="#1d1d1f" stroke-width="1.2"/>
+        </g>
+      </g>
+    </svg>`;
+  }
+  function spinner() {
+    let s = '';
+    for (let i = 0; i < 8; i++) s += `<rect x="6.2" y="0.5" width="1.6" height="4" rx=".8" fill="#8a8a8e" transform="rotate(${i * 45} 7 7)" opacity="${(0.25 + 0.75 * i / 7).toFixed(2)}"/>`;
+    return `<svg width="14" height="14" viewBox="0 0 14 14">${s}</svg>`;
+  }
+  function scrConnect() {
+    return screen(`
+      <div class="a big" data-k="title" style="left:40px;top:163px">Let’s connect<br>your healthcare<br>devices</div>
+      <div class="a body" data-k="body" style="left:40px;top:282px;width:310px">You can sync your Apple Watch or other devices with Vision Health to gather your daily schedule data. Just turn them on and place them nearby.</div>
+      <div class="a" data-k="illu" style="left:45px;top:388px;width:300px;height:250px">${illustration()}</div>
+      <div class="a" data-k="searching" style="left:0;top:648px;width:390px;display:flex;justify-content:center;align-items:center;gap:8px;font-size:14px;color:#8a8a8e"><span data-k="spin" class="m" style="position:relative;display:inline-block;width:14px;height:14px">${spinner()}</span>Searching for devices</div>
+      <div class="a" data-k="card" style="left:22px;top:427px;width:346px;height:158px;background:#ececec;border-radius:18px">
+        <div class="a" style="left:19px;top:20px;font-size:17px;font-weight:500;letter-spacing:-.01em">Noise ColorFit Ultra 3</div>
+        <div class="a" style="left:19px;top:44px;font-size:11px;color:#8a8a8e">Smartwatch</div>
+        <div class="a" style="left:19px;top:69px;font-size:12px;line-height:14.5px;display:flex;gap:7px">${SVG.minibars}<span>Records time spent<br>in daylight</span></div>
+        <div class="a" data-k="connect" style="left:19px;top:116px;width:92px;height:24px;border-radius:12px;background:#3d96f2;color:#fff;font-size:12px;letter-spacing:.04em;display:flex;align-items:center;justify-content:center">CONNECT</div>
+        <div class="a" data-k="connected" style="left:19px;top:116px;width:122px;height:24px;border-radius:12px;background:#fff;color:#34c759;font-size:12px;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:6px">${SVG.check('#34c759')}CONNECTED</div>
+        <div class="a" style="left:226px;top:17px">${img('watch', 106, 122)}</div>
+      </div>
+      <div class="a link" data-k="skip" style="left:0;top:761px;width:390px;text-align:center;font-size:16px">Skip this step</div>
+      <div class="a btn" data-k="go" style="left:24px;top:737px;width:342px;height:48px">Cool, let’s move forward</div>`);
+  }
+
+  // ---- Personal information ----
+  function scrIntro() {
+    return screen(`
+      <div class="a appicon" data-k="icon" style="left:42px;top:367px;width:50px;height:50px"><div class="a dot" style="left:6px;top:6px;width:38px;height:38px"></div></div>
+      <div class="a q" data-k="title" style="left:42px;top:435px;width:320px">Aryan, we know nothing about your vision health status. Please tell us a little</div>
+      <div class="a body" data-k="body" style="left:42px;top:536px;width:250px;font-size:14px">This will help us make your Vision Health recommendations more personal and useful</div>
+      <div class="a pill fill" data-k="ok" style="left:192px;top:680px;width:170px;height:42px">Okay, I’m ready</div>
+      <div class="a pill blk" data-k="later" style="left:192px;top:740px;width:170px;height:42px">No, let’s do it later</div>`);
+  }
+
+  // A questionnaire screen: answers collect at the top, questions swap in at the bottom.
+  // qs: [{ label:'Question 1 of 5', q, buttons:[[label, cls, x, y, w]], field? }]
+  function scrQuestions(qs, summary, opts = {}) {
+    const top = opts.top ?? 88;
+    let s = '';
+    if (opts.header) s += `<div class="a" style="left:28px;top:47px;display:flex;align-items:center;gap:8px;font-size:14px">${SVG.back}${opts.header}</div><div class="a" style="left:28px;top:93px;font-size:19px;font-weight:500;letter-spacing:-.01em">${opts.title}</div>`;
+    s += `<div class="a" style="left:${opts.sx ?? 42}px;top:${top}px;width:220px;display:flex;flex-direction:column;gap:9px">` +
+      summary.map((l, i) => `<div class="m body" data-k="s${i}" style="position:relative;font-size:14.5px;color:#76767c">${l}</div>`).join('') + '</div>';
+    qs.forEach((q, i) => {
+      s += `<div class="a" data-k="q${i}" style="left:0;top:0;width:390px;height:844px">
+        <div class="a" style="left:${opts.sx ?? 42}px;top:516px;font-size:15px;color:#76767c">Question <b style="color:#4a4a50;font-weight:600">${q.n}</b></div>
+        <div class="a q" style="left:${opts.sx ?? 42}px;top:545px;width:${q.w ?? 300}px">${q.q}</div>
+        ${q.field ? field(30, 657, 322, q.field) : ''}
+        ${q.buttons.map((b, j) => `<div class="a pill ${b[1]}" data-k="b${i}_${j}" style="left:${b[2]}px;top:${b[3]}px;width:${b[4]}px;height:42px">${b[0]}</div>`).join('')}
+      </div>`;
+    });
+    return screen(s);
+  }
+  const BR = [226, 137];   // right-column pill: x, width
+  function scrVisionNumber() {
+    return screen(`
+      <div class="a q" data-k="t1" style="left:42px;top:370px;width:260px">What is your vision number?</div>
+      <div data-k="f1">${field(30, 463, 322, '-0.75 and -1.5')}</div>
+      <div class="a q" data-k="t2" style="left:42px;top:543px;width:260px">Since when do you have the number?</div>
+      <div data-k="f2">${field(30, 634, 322, '2 years')}</div>
+      <div class="a pill" data-k="go" style="left:195px;top:740px;width:160px;height:42px">Skip the question</div>`);
+  }
+  function scrMedical() {
+    return screen(`
+      <div class="a q" data-k="t1" style="left:42px;top:146px;width:280px">What is your medical history regarding your eyesight?</div>
+      <div data-k="f1">${field(30, 263, 322, 'Dry eyes')}</div>
+      <div class="a q" data-k="t2" style="left:42px;top:342px;width:280px">Mention any medication you are / have used for your eyes</div>
+      <div data-k="f2">${field(30, 463, 322, 'Refresh tears eye drops')}</div>
+      <div class="a q" data-k="t3" style="left:42px;top:543px;width:280px">What is your goal for your vision health?</div>
+      <div data-k="f3">${field(30, 634, 322, 'Strengthening eye muscles')}</div>
+      <div class="a pill" data-k="go" style="left:195px;top:740px;width:160px;height:42px">Skip the question</div>`);
+  }
+
+  // ---- tab bar (persists across the main screens) ----
+  function tabbar(phone) {
+    const t = el(`<div class="tabbar m">
+      ${[['Summary', 'heart', 71], ['Analysis', 'bars', 196], ['Sharing', 'people', 317]].map(([n, ic, x], i) => `
+        <div class="tab" style="left:${x}px"><div class="off">${SVG[ic]('#8a8a8e')}${n}</div><div class="on m" data-k="on${i}">${SVG[ic]('#3a93ef')}${n}</div></div>`).join('')}
+    </div>`);
+    phone.screen.appendChild(t);
+    const k = refs(t);
+    base(t, { op: 0 });
+    [0, 1, 2].forEach((i) => base(k['on' + i], { op: 0 }));
+    return { el: t, k };
+  }
+  function tabTo(tb, i, t0, d = 0.2) {
+    cue(t0, d, (p) => { [0, 1, 2].forEach((j) => { const s = S(tb.k['on' + j]); s.op = j === i ? Math.max(s.op ?? 0, p) : (s.op ?? 0) * (1 - p); }); });
+  }
+
+  // ---- Summary ----
+  function scrSummary() {
+    const bar = (y, label, pct, fill, k) => `
+      <div class="a" style="left:50px;top:${y}px;font-size:13px">${label}</div>
+      <div class="a" style="left:50px;top:${y + 19}px;width:289px;height:15px;border-radius:8px;background:#cfe6fc;overflow:hidden">
+        <div class="a" data-k="${k}" style="left:0;top:0;height:15px;width:${289 * pct}px;border-radius:8px;background:${fill}"></div>
+        <div class="a" data-k="${k}l" style="left:${289 * pct - 30}px;top:2px;width:24px;text-align:center;font-size:7px;color:#5a6b80;line-height:11px">${Math.round(pct * 100)}%</div>
+      </div>`;
+    const rc = (x, y, t, d, k) => `<div class="a card" data-k="${k}" style="left:${x}px;top:${y}px;width:156px;height:175px">
+        <div class="a" style="left:17px;top:30px;font-size:14.5px;line-height:18px">${t}</div>
+        <div class="a" style="left:17px;top:73px;width:120px;font-size:9.5px;line-height:12px;color:#222">${d}</div>
+        <div class="a more" style="left:63px;top:136px;width:80px;height:21px" data-k="${k}m">MORE ${SVG.chev('#fff', 5, 9)}</div></div>`;
+    return screen(`<div class="scroll m" data-k="scroll">
+      <div class="a date" data-k="date" style="left:27px;top:74px">Saturday, May 10</div>
+      <div class="a ttl" data-k="title" style="left:26px;top:94px">Summary</div>
+      <div class="a" data-k="prof" style="left:335px;top:99px">${SVG.profile}</div>
+      <div class="a sec" data-k="act" style="left:27px;top:157px">Activity</div>
+      <div class="a link" data-k="see" style="left:290px;top:166px;font-size:14px">See More</div>
+      <div class="a card" data-k="card" style="left:27px;top:208px;width:336px;height:171px">
+      </div>
+      <div class="a" data-k="bars" style="left:0;top:0">
+        ${bar(222, 'Eye Exercises', 0.4, '#a9d3fb', 'b0')}
+        ${bar(272, 'Eye Tests', 0.24, '#8ec6fa', 'b1')}
+        ${bar(322, 'Eye Games', 0.7, '#5aaef7', 'b2')}
+      </div>
+      <div class="a sec" data-k="rec" style="left:27px;top:414px;font-weight:500">Recommended Activities</div>
+      ${rc(27, 463, 'Eye<br>Exercises', 'Complete 4/6 exercises today minimum', 'c0')}
+      ${rc(207, 463, 'Eye<br>Tests', 'Routine tests for your eye health are due', 'c1')}
+      ${rc(27, 660, 'Eye<br>Games', 'Accept Akanksha’s challenge and beat her at Color Cube today', 'c2')}
+      ${rc(207, 660, 'Eye Health<br>Education', 'Do you know the main reason for the spike in Myopia cases?', 'c3')}
+    </div>`);
+  }
+
+  // ---- Analysis (scrolls down to the daylight chart) ----
+  const DAY = [['Mon', 58], ['Tue', 109], ['Wed', 81], ['Thu', 69], ['Fri', 99], ['Sat', 85], ['Sun', 63]];
+  function seg(x, y) {
+    return `<div class="a seg" style="left:${x}px;top:${y}px;width:338px;height:30px"><div class="on">Day</div><div>Week</div><div>Monthly</div><div>6 Months</div><div>Yearly</div></div>`;
+  }
+  function daylightBlock(y0, withChart, kp = '') {
+    let s = `<div class="a sec" style="left:27px;top:${y0}px">Time in Daylight</div>
+      <div class="a link" style="left:295px;top:${y0 + 8}px;font-size:14px">Add Data</div>
+      ${seg(26, y0 + 41)}
+      <div class="a" style="left:27px;top:${y0 + 86}px;font-size:14.5px;color:#76767c">Average</div>
+      <div class="a red" style="left:27px;top:${y0 + 106}px"><span style="font-size:19px" data-k="${kp}avg">90</span> <span style="font-size:14px">min</span></div>
+      <div class="a" style="left:27px;top:${y0 + 136}px;font-size:13px;color:#76767c">Saturday, May 10</div>`;
+    if (withChart) {
+      const top = y0 + 175, base0 = top + 210, k = 210 / 150;
+      [150, 100, 50, 0].forEach((v) => {
+        const y = base0 - v * k;
+        s += `<div class="a" style="left:27px;top:${y}px;width:310px;height:.8px;background:#e2e2e6"></div><div class="a" style="left:345px;top:${y - 6}px;font-size:8px;color:#9a9aa0">${v}</div>`;
+      });
+      DAY.forEach(([d, v], i) => {
+        const x = 38 + i * 44;
+        s += `<div class="a" style="left:${x}px;top:${top}px;width:27px;height:210px"><div class="barv" data-k="${kp}d${i}" style="left:0;width:27px;height:${v * k}px;background:#5aaef7;border-radius:3px 3px 0 0"></div></div>
+          <div class="a" style="left:${x - 6}px;top:${base0 + 8}px;width:39px;text-align:center;font-size:8.5px;color:#8a8a90">${d}</div>`;
+      });
+    }
+    return s;
+  }
+  function scrAnalysis() {
+    const row = (y, n, c, line) => `<div class="a" style="left:27px;top:${y}px;font-size:13.5px">${n}</div><div class="a red" style="left:27px;top:${y + 20}px;font-size:14.5px">${c}</div>` + (line ? `<div class="a" style="left:27px;top:${y + 45}px;width:192px;height:.8px;background:#c9c9ce"></div>` : '');
+    const H = 150;
+    return screen(`<div class="scroll m" data-k="scroll" style="height:1500px">
+      <div class="a date" style="left:27px;top:74px">Saturday, May 10</div>
+      <div class="a ttl" style="left:26px;top:94px">Analysis</div>
+      <div class="a card" style="left:26px;top:151px;width:338px;height:159px">
+        <div class="a ava" style="left:21px;top:37px;width:86px;height:86px;font-size:38px">A</div>
+        <div class="a" style="left:126px;top:44px;font-size:15.5px;line-height:24.5px">Aryan Arora<br>20<br>Myopia (-0.75 and -0.5)</div>
+      </div>
+      <div class="a sec" style="left:27px;top:333px">Your Activity</div>
+      <div class="a" style="left:27px;top:374px;font-size:15px;color:#76767c">Today</div>
+      ${row(413, 'Eye Exercises', '3/6 completed', 1)}${row(471, 'Eye Tests', '2/6 completed', 1)}${row(530, 'Eye Games', '4/6 completed', 0)}
+      <div class="a" style="left:268px;top:${569 - H}px;width:90px;height:${H}px">
+        <div class="barv" data-k="a0" style="left:0;width:14px;height:${H * 0.75}px;background:#bfe0fd"></div>
+        <div class="barv" data-k="a1" style="left:30px;width:14px;height:${H * 0.45}px;background:#8ec6fa"></div>
+        <div class="barv" data-k="a2" style="left:59px;width:14px;height:${H}px;background:#5aaef7"></div>
+      </div>
+      ${daylightBlock(605, true)}
+      <div class="a sec" style="left:27px;top:1132px">Vision Prescription</div>
+      <div class="a link" style="left:295px;top:1140px;font-size:14px">Add Data</div>
+      <div class="a" style="left:27px;top:1176px;font-size:15px">No Data Available</div>
+      <div class="a pill" style="left:26px;top:1211px;width:160px;height:31px;border-radius:7px;font-size:11.5px;color:#333">Enter Data Manually</div>
+      <div class="a" style="left:200px;top:1211px;width:160px;height:31px;border-radius:7px;background:#b4b4b8;color:#fff;font-size:11.5px;display:flex;align-items:center;justify-content:center;gap:6px">${SVG.image}Add an Image</div>
+      <div class="a sec" style="left:27px;top:1278px">Your Profile</div>
+      <div class="a link" style="left:335px;top:1286px;font-size:14px">Edit</div>
+      <div class="a card" style="left:26px;top:1324px;width:338px;height:150px">
+        <div class="a ava" style="left:21px;top:32px;width:86px;height:86px;font-size:38px">A</div>
+        <div class="a" style="left:126px;top:50px;font-size:15.5px;line-height:24.5px">Aryan Arora<br>20</div>
+      </div>
+    </div>`);
+  }
+  function alertLayer(phone) {
+    const a = el(`<div class="alert m">
+      <div class="a" data-k="veil" style="inset:0;width:390px;height:844px;background:rgba(255,255,255,.9)"></div>
+      <div class="a" data-k="close" style="left:0;top:356px;width:390px;text-align:center">
+        <svg width="34" height="24" viewBox="0 0 34 24" style="display:block;margin:0 auto">
+          <g fill="none" stroke="#5aa6f5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path data-k="c0" d="M3 10l14-8 14 8"/><path data-k="c1" d="M3 16l14-8 14 8" opacity=".75"/><path data-k="c2" d="M3 22l14-8 14 8" opacity=".5"/></g></svg>
+        <div style="margin-top:12px;font-size:19px;font-weight:600;letter-spacing:-.015em">iPhone is Too Close</div>
+        <div style="margin-top:8px;font-size:13px;line-height:16.5px;color:#333">Keeping your iPhone at a greater<br>distance can protect your eyesight</div>
+      </div>
+      <div class="a" data-k="ok" style="left:0;top:352px;width:390px;text-align:center">
+        <svg width="32" height="32" viewBox="0 0 32 32" style="display:block;margin:0 auto">
+          <circle data-k="ring" cx="16" cy="16" r="14" fill="none" stroke="#3a93ef" stroke-width="2" stroke-dasharray="88" stroke-dashoffset="88" transform="rotate(-90 16 16)"/>
+          <path data-k="tick" d="M10 16.5l4.2 4.2L22.5 11.6" fill="none" stroke="#3a93ef" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="20" stroke-dashoffset="20"/></svg>
+        <div style="margin-top:9px;font-size:19px;font-weight:600;letter-spacing:-.015em">Screen Distance</div>
+        <div style="margin-top:8px;font-size:13px;line-height:16.5px;color:#333">Your iPhone is at a<br>safe screen distance</div>
+      </div>
+    </div>`);
+    phone.screen.appendChild(a);
+    const k = refs(a);
+    base(a, { op: 0 }); base(k.close, { op: 0 }); base(k.ok, { op: 0 });
+    return { el: a, k };
+  }
+
+  // ---- Sharing ----
+  function scrSharing() {
+    const stat = (y, a, b) => `<div class="a" style="left:16px;top:${y}px;font-size:10.5px;line-height:13.5px;width:150px">${a}${b}</div>`;
+    return screen(`
+      <div class="a date" style="left:27px;top:74px">Saturday, May 10</div>
+      <div class="a ttl" style="left:26px;top:94px">Sharing</div>
+      <div class="a sec" style="left:27px;top:158px">Highlights</div>
+      <div class="a card" data-k="h1" style="left:27px;top:202px;width:283px;height:293px">
+        <div class="a ava b" style="left:16px;top:24px;width:28px;height:28px;font-size:13px">A</div>
+        <div class="a" style="left:62px;top:22px;font-size:13px;line-height:16px">Akanksha topped their<br>personal bars today</div>
+        ${stat(93, 'High Score : ', '<span class="blue">450</span>')}
+        ${stat(122, 'Time spent in<br>Daytime : ', '<span class="blue">58 mins</span>')}
+        ${stat(171, 'Rewards achieved :<br>', '<span class="blue">Color Picker Master</span>')}
+        ${stat(219, 'Akanksha wants to<br>challenge you at Color<br>Cube game', '')}
+        <div class="a" style="left:184px;top:96px;width:80px;height:166px">
+          <div class="barv" data-k="s0" style="left:0;width:15px;height:62px;background:#bfe0fd"></div>
+          <div class="barv" data-k="s1" style="left:30px;width:15px;height:160px;background:#8ec6fa"></div>
+          <div class="barv" data-k="s2" style="left:60px;width:15px;height:116px;background:#5aaef7"></div>
+        </div>
+      </div>
+      <div class="a card" style="left:326px;top:202px;width:283px;height:293px">
+        <div class="a ava b" style="left:16px;top:24px;width:28px;height:28px;font-size:13px">K</div>
+        ${stat(93, 'High Score : ', '<span class="blue">380</span>')}
+        ${stat(122, 'Time spent in<br>Daytime : ', '<span class="blue">64 mins</span>')}
+        ${stat(171, 'Rewards achieved :<br>', '<span class="blue">Odd Man Out</span>')}
+      </div>
+      <div class="a sec" style="left:27px;top:525px">Your Friends</div>
+      <div class="a link" style="left:278px;top:533px;font-size:14px">Add Friends</div>
+      <div class="a" style="left:27px;top:563px;font-size:13.5px">Today, May 10</div>
+      <div class="a card" data-k="f0" style="left:27px;top:598px;width:180px;height:200px">
+        <div class="a ava" style="left:50px;top:30px;width:80px;height:80px;font-size:34px">A</div>
+        <div class="a" style="left:0;top:122px;width:180px;text-align:center;font-size:14px">Akanksha Shah</div>
+        <div class="a" style="left:16px;top:156px;font-size:10.5px">High Score : <span class="blue">450</span></div></div>
+      <div class="a card" data-k="f1" style="left:224px;top:598px;width:180px;height:200px">
+        <div class="a ava" style="left:50px;top:30px;width:80px;height:80px;font-size:34px">S</div>
+        <div class="a" style="left:0;top:122px;width:180px;text-align:center;font-size:14px">Sahil Mehta</div>
+        <div class="a" style="left:16px;top:156px;font-size:10.5px">High Score : <span class="blue">629</span></div></div>`);
+  }
+
+  // ---- Activity pages (Exercises / Tests / Games) ----
+  function scrActivity(o) {
+    const st = (x, n, u, d) => `<div class="a" style="left:${x}px;top:115px;width:60px"><div class="blue" style="font-size:17px;line-height:19px" data-k="n${x}">${n}</div><div class="blue" style="font-size:7.5px;line-height:9px">${u}</div><div style="font-size:7.5px;line-height:9px;color:#333">${d}</div></div>`;
+    const rows = o.rows.map(([icon, t, d], i) => `<div class="a row" data-k="r${i}" style="left:27px;top:${391 + i * 96}px;width:331px;height:78px">
+        <div class="a tile" style="left:16px;top:10px;width:58px;height:58px;border-radius:10px">${img(icon, 52)}</div>
+        <div class="a" style="left:92px;top:19px;font-size:15px;letter-spacing:-.01em">${t}</div>
+        <div class="a" style="left:92px;top:42px;font-size:12.5px;color:#76767c">${d}</div>
+        <div class="chev" style="left:300px;top:30px">${SVG.chev('#3c3c43', 9, 16)}</div></div>`).join('');
+    return screen(`
+      <div class="a ttl2" data-k="title" style="left:27px;top:95px">${o.title}</div>
+      <div class="a link" data-k="see" style="left:300px;top:104px;font-size:14px">See Bars</div>
+      <div class="a card" data-k="main" style="left:27px;top:157px;width:193px;height:208px">
+        <div class="a tile" style="left:16px;top:14px;width:66px;height:66px">${o.bigIcon}</div>
+        <div class="a" style="left:16px;top:90px;font-size:11.5px">${o.name}</div>
+        ${st(16, o.s[0][0], o.s[0][1], o.s[0][2])}${st(76, o.s[1][0], o.s[1][1], o.s[1][2])}${st(139, o.s[2][0], o.s[2][1], o.s[2][2])}
+        <div class="a" style="left:16px;top:182px;font-size:10px">Recommended for today</div>
+      </div>
+      <div class="a card" data-k="sc" style="left:236px;top:157px;width:122px;height:119px">
+        <div class="a" style="left:12px;top:13px;font-size:9px;line-height:11px;color:#333">${o.scoreLbl}</div>
+        <div class="a blue" style="left:12px;top:40px;font-size:18px" data-k="score">${o.score}</div>
+        <div class="a blue" style="left:12px;top:63px;font-size:8px">points</div>
+        <div class="a" style="left:12px;top:80px;font-size:9px;line-height:11px">in the past<br>2 months</div>
+      </div>
+      <div class="a card" data-k="sk" style="left:236px;top:291px;width:122px;height:74px">
+        <div class="a" style="left:12px;top:12px;font-size:9px;line-height:11px;color:#333">${o.streakLbl}</div>
+        <div class="a blue" style="left:12px;top:36px;font-size:18px" data-k="streak">${o.streak[0]}</div>
+        <div class="a blue" style="left:12px;top:58px;font-size:8px">${o.streak[1]}</div>
+      </div>
+      ${rows}`);
+  }
+  const colorMatchIcon = (s = 1) => `<div style="position:relative;width:${44 * s}px;height:${44 * s}px"><div style="position:absolute;left:${4 * s}px;top:${4 * s}px;width:${30 * s}px;height:${30 * s}px;border-radius:${6 * s}px;background:#e0395f"></div><div style="position:absolute;left:${24 * s}px;top:${24 * s}px;width:${15 * s}px;height:${15 * s}px;border-radius:50%;background:#8ec5fa"></div></div>`;
+  const ACT = {
+    ex: { title: 'Eye Exercises', bigIcon: img('kaleidoscope', 60), name: 'Kaleidoscope', s: [[28, 'points', 'collected<br>by you'], [5, 'days ago', 'last done'], [1, 'time', 'per day<br>minimum']],
+      scoreLbl: 'Aryan’s eye<br>exercises score', score: 154, streakLbl: 'Aryan’s longest eye<br>exercise streak', streak: [8, 'days'],
+      rows: [['palming', 'Palming', '2 times in a day'], ['lazy-eye', 'Lazy Eye', '1 time in a day'], ['eye-muscle', 'Eye Muscle Training', '3 times in a day'], ['closed-eye', 'Closed Eye Movement', '2 times in a day']] },
+    te: { title: 'Eye Tests', bigIcon: img('okn', 60), name: 'Okn', s: [[12, 'points', 'collected<br>by you'], [2, 'days ago', 'last done'], [1, 'time', 'per month<br>minimum']],
+      scoreLbl: 'Aryan’s eye<br>tests score', score: 98, streakLbl: 'Aryan’s longest eye<br>tests streak', streak: [3, 'weeks'],
+      rows: [['snellen', 'Snellen Chart', '1 time in a month'], ['color-blindness', 'Color Blindness', '1 time in a month'], ['landolt', 'Landolt', '2 times in a month'], ['astigmatism', 'Astigmatism Test', '2 times in a month']] },
+    ga: { title: 'Eye Games', bigIcon: colorMatchIcon(1.1), name: 'Color Match', s: [[89, 'points', 'collected<br>by you'], [1, 'day ago', 'last done'], [2, 'times', 'a week<br>minimum']],
+      scoreLbl: 'Aryan’s eye<br>games score', score: 257, streakLbl: 'Aryan’s longest eye<br>games streak', streak: [16, 'days'],
+      rows: [['match-tiles', 'Match Tiles', '2 times in a month'], ['odd-one-out', 'Odd One Out', '2 times in a month'], ['color-cube', 'Color Cube', '2 times in a month'], ['speed-reading', 'Speed Reading', '3 times in a month']] },
+  };
+  function scrEducation() {
+    const cards = [
+      ['edu-1', 'What is causing the recent surge in myopia among younger individuals?'],
+      ['edu-2', 'Can incorporating exercises contribute to the protection of your eyesight?'],
+      ['edu-3', 'How does the sunlight exposure affect the development of our eyes?'],
+      ['edu-4', 'Why is it necessary to get your eyes at least once a year?'],
+      ['edu-5', 'Tips to prevent digital strain on our eyes'],
+      ['edu-6', 'Learn about the signs and symptoms of cataract'],
+    ];
+    return screen(`<div class="a ttl2" style="left:27px;top:95px">Eye Health Education</div>` + cards.map(([im, t], i) => {
+      const x = i % 2 ? 207 : 27, y = 157 + Math.floor(i / 2) * 232;
+      return `<div class="a card" data-k="e${i}" style="left:${x}px;top:${y}px;width:156px;height:196px">
+        <div class="a tile" style="left:11px;top:13px;width:134px;height:80px;border-radius:10px">${img(im, 132, 79)}</div>
+        <div class="a" style="left:12px;top:104px;width:134px;font-size:9.5px;line-height:12.5px">${t}</div>
+        <div class="a more" style="left:12px;top:158px;width:80px;height:21px;background:#8cc6fa">READ ${SVG.chev('#fff', 5, 9)}</div></div>`;
+    }).join(''));
+  }
+
+  // ---- Color Match ----
+  const back = (label) => `<div class="a" style="left:28px;top:47px;display:flex;align-items:center;gap:8px;font-size:14px">${SVG.back}${label}</div>`;
+  function ring(cx, cy, r, w, extra = '') {
+    return `<div class="a wheel" style="${extra}left:${cx - r}px;top:${cy - r}px;width:${2 * r}px;height:${2 * r}px;-webkit-mask:radial-gradient(circle,transparent ${r - w - 0.5}px,#000 ${r - w + 0.5}px);mask:radial-gradient(circle,transparent ${r - w - 0.5}px,#000 ${r - w + 0.5}px)"></div>`;
+  }
+  function scrColorIntro() {
+    return screen(`${back('Eye Games')}
+      <div class="a ttl2" style="left:28px;top:95px">Color Match</div>
+      <div class="m" data-k="p1" style="position:absolute;left:0;top:0;width:390px;height:700px">
+        <div class="a" data-k="sq" style="left:119px;top:217px;width:142px;height:142px;border-radius:18px;background:#de3a5f"></div>
+        <div class="a" data-k="ball" style="left:205px;top:308px;width:70px;height:70px;border-radius:50%;background:#8ec5fa"></div>
+        <div class="a" style="left:30px;top:474px;width:335px;font-size:15.5px;line-height:21px">Color Game: An interactive tool refining color perception and motor skills through precise shade alignment on a color wheel.</div>
+      </div>
+      <div class="m" data-k="p2" style="position:absolute;left:0;top:0;width:390px;height:700px">
+        <div class="a" data-k="halo" style="left:0;top:0;width:390px;height:574px">${ring(195, 287, 98, 22, 'filter:blur(7px);opacity:.45;')}</div>
+        <div class="a" data-k="wheel" style="left:0;top:0;width:390px;height:574px">${ring(195, 287, 92, 14)}</div>
+        <div class="a" style="left:0;top:270px;width:390px;text-align:center;font-size:14.5px;line-height:18px">Press to get<br>started</div>
+        <div class="a" style="left:30px;top:437px;font-size:17px;font-weight:500">Instructions</div>
+        <div class="a card" style="left:24px;top:484px;width:342px;height:63px;border-radius:10px"><div class="a" style="left:16px;top:14px;width:300px;font-size:13px;line-height:17px;color:#333">Rotate the ball on the screen in order to match the color</div></div>
+        <div class="a card" style="left:24px;top:569px;width:342px;height:63px;border-radius:10px"><div class="a" style="left:16px;top:14px;width:300px;font-size:13px;line-height:17px;color:#333">Press on the inner circle once you match the color</div></div>
+      </div>
+      <div class="a" data-k="d0" style="left:182px;top:704px;width:7px;height:7px;border-radius:50%;background:#3d96f2"></div>
+      <div class="a" data-k="d1" style="left:197px;top:704px;width:7px;height:7px;border-radius:50%;background:#c7c7cc"></div>
+      <div class="a" data-k="d0b" style="left:182px;top:704px;width:7px;height:7px;border-radius:50%;background:#c7c7cc"></div>
+      <div class="a" data-k="d1b" style="left:197px;top:704px;width:7px;height:7px;border-radius:50%;background:#3d96f2"></div>
+      <div class="a btn" data-k="go" style="left:24px;top:742px;width:342px;height:48px">Start Training</div>`);
+  }
+  const hueAt = (deg) => 120 - deg;                       // ring: green at the top, red at 3 o’clock, violet at the bottom
+  function scrGame() {
+    return screen(`<div class="a" style="inset:0;width:390px;height:844px;background:#fff"></div>
+      <div class="a" data-k="wheel" style="left:0;top:0;width:390px;height:872px">${ring(195, 436, 128, 19)}</div>
+      <div class="a" data-k="hue" style="left:0;top:396px;width:390px;text-align:center;font-size:54px;font-weight:700;letter-spacing:-.04em;color:#333;line-height:56px">hue</div>
+      <div class="a" data-k="cnt" style="left:0;top:456px;width:390px;text-align:center;font-size:11.5px;color:#333">will start in 3</div>
+      <div class="a" data-k="disc" style="left:147px;top:388px;width:96px;height:96px;border-radius:50%;background:#f39c12;overflow:hidden">
+        <div class="a" data-k="pie" style="left:0;top:0;width:96px;height:96px;border-radius:50%"></div>
+      </div>
+      <div class="a" data-k="confirm" style="left:147px;top:418px;width:96px;text-align:center;font-size:10.5px;line-height:13px;color:#fff">Tap to<br>confirm match</div>
+      <div class="a" data-k="knob" style="left:0;top:0;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;border:2.6px solid #262626;box-sizing:border-box;background:transparent"></div>`);
+  }
+  function scrResult() {
+    const sb = (y, w, c, v, k) => `<div class="a" data-k="${k}" style="left:18px;top:${y}px;width:${w}px;height:14px;border-radius:7px;background:${c}"></div><div class="a" data-k="${k}l" style="left:${24 + w}px;top:${y + 2}px;font-size:8px">${v}</div>`;
+    const fr = (x, l, n) => `<div class="a" data-k="fr${x}" style="left:${x - 30}px;top:65px;width:60px;text-align:center"><div class="ava" style="width:40px;height:40px;margin:0 auto;background:#5aaef7;font-size:17px">${l}</div><div style="margin-top:6px;font-size:8.5px;line-height:10.5px">${n}</div></div>`;
+    return screen(`${back('Eye Games')}
+      <div class="a ttl2" style="left:28px;top:95px">Color Match</div>
+      <div class="a card" data-k="c1" style="left:27px;top:153px;width:336px;height:319px">
+        <div class="a" style="left:18px;top:24px;font-size:16px;line-height:20px">Today’s<br>performance</div>
+        <div class="a" style="left:18px;top:80px;font-size:11.5px;line-height:26px">Score : <span class="blue" data-k="score">124</span><br>Points Collected : <span class="blue">35 points</span><br>Perfect Matches : <span class="blue">5 matches</span></div>
+        <div class="a" style="left:18px;top:170px;font-size:16px;line-height:20px">Your<br>Scorecard</div>
+        ${sb(224, 172, '#bfe0fd', 124, 'x0')}${sb(254, 98, '#8ec6fa', 76, 'x1')}${sb(284, 144, '#5aaef7', 104, 'x2')}
+        <div class="a" style="left:298px;top:276px">${SVG.share}</div>
+      </div>
+      <div class="a card" data-k="c2" style="left:27px;top:494px;width:336px;height:158px">
+        <div class="a" style="left:18px;top:22px;font-size:16px;line-height:20px">Challenge<br>Your Friends</div>
+        ${fr(45, 'A', 'Akanksha<br>Shah')}${fr(127, 'S', 'Sahil<br>Mehta')}${fr(208, 'A', 'Aarushi<br>Patel')}${fr(289, 'K', 'Kavya<br>Mehra')}
+      </div>
+      <div class="a btn" data-k="tell" style="left:24px;top:674px;width:342px;height:48px">Tell us your experience</div>
+      <div class="a btn" data-k="next" style="left:24px;top:737px;width:342px;height:48px;background:#fff;color:#555;border:1.3px solid #9a9aa0;box-sizing:border-box">Next Game</div>`);
+  }
+
+  // ---- Virtual consultation ----
+  function scrConsult() {
+    const doc = (y, im, n, yrs, stars, k) => `<div class="a card" data-k="${k}" style="left:31px;top:${y}px;width:328px;height:144px">
+      <div class="a tile" style="left:19px;top:26px;width:92px;height:94px;border-radius:10px">${im ? img(im, 82, 84) : ''}</div>
+      <div class="a" style="left:130px;top:28px;font-size:16px;letter-spacing:-.01em">${n}</div>
+      <div class="a" style="left:130px;top:52px;font-size:10.5px;color:#76767c">${yrs} years of experience</div>
+      <div class="a stars" style="left:130px;top:69px">${'★'.repeat(stars)}</div>
+      <div class="a book" style="left:130px;top:96px;width:116px;height:19px">BOOK APPOINTMENT</div></div>`;
+    return screen(`${back('Eye Tests')}
+      <div class="a ttl2" style="left:28px;top:95px">Virtual Consultation</div>
+      <div class="a" style="left:18px;top:148px;width:354px;height:35px;border-radius:10px;background:#eeeef0;display:flex;align-items:center;gap:7px;padding-left:10px;box-sizing:border-box;font-size:16px;color:#8a8a8e">${SVG.search}Search<span style="position:absolute;right:12px;top:9px">${SVG.mic}</span></div>
+      ${doc(212, 'dr-ayesha', 'Ayesha Khan', 18, 4, 'd0')}${doc(387, 'dr-rohit', 'Rohit Kapoor', 10, 4, 'd1')}${doc(561, 'dr-priya', 'Priya Sharma', 12, 5, 'd2')}${doc(736, null, 'Swati Gupta', 9, 4, 'd3')}`);
+  }
+
+  // ================= captions =================
+  function caption(n, h, d) {
+    const c = el(`<div class="cap"><div class="n" data-k="n">${n}</div><div class="h" data-k="h">${h}</div><div class="d" data-k="d">${d}</div></div>`);
+    stage.appendChild(c);
+    const k = refs(c);
+    return { el: c, k };
+  }
+  function capShow(c, t0, t1) {
+    const parts = [c.k.n, c.k.h, c.k.d];
+    base(c.el, { op: 1 });
+    parts.forEach((e, i) => {
+      base(e, { op: 0 });
+      cue(t0 + i * 0.09, 0.8, (p) => { const q = E.ui(p); const s = S(e); s.op = q; s.ty = 22 * (1 - q); });
+    });
+  }
+  function capHide(c, t1) {
+    [c.k.n, c.k.h, c.k.d].forEach((e, i) => {
+      cue(t1 + i * 0.05, 0.4, (p) => { const q = E.in(p); const s = S(e); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 14 * q; });
+    });
+  }
+  function heading(n, h) {
+    const c = el(`<div class="heading"><div class="n" data-k="n">${n}</div><div class="h" data-k="h">${h}</div></div>`);
+    stage.appendChild(c);
+    return { el: c, k: refs(c) };
+  }
+
+  // =====================================================================
+  //                              TIMELINE
+  // =====================================================================
+  const CX = 1275, CY = 540;       // the phone's resting place next to the captions
+  const MID = 960;
+  const main = makePhone();
+  const tb = tabbar(main);
+  const al = alertLayer(main);
+
+  const caps = [
+    caption('01', 'Welcome', 'Vision Health is an eye-health app that works as a companion to Apple Health.'),
+    caption('02', 'Connect your devices', 'Pair a smartwatch so Vision Health can record your time spent in daylight.'),
+    caption('03', 'Getting to know you', 'Five quick questions make every recommendation personal.'),
+    caption('04', 'Your daily summary', 'Eye exercises, tests and games, with today’s progress at a glance.'),
+    caption('05', 'Analysis', 'Activity, time in daylight, and a gentle nudge when the screen is too close.'),
+    caption('07', 'Color Match', 'A color-wheel game that sharpens shade perception and motor control.'),
+    caption('08', 'Your experience', 'A short check-in after every game.'),
+    caption('09', 'Virtual consultation', 'When something feels off, an eye doctor is a tap away.'),
+  ];
+  caps.forEach((c) => { const r = 540 - 110; c.el.style.top = r + 'px'; });
+
+  // ---------- 0. intro: splash dot, then the welcome screen ----------
+  const wel = mount(main, scrWelcome());
+  const wk = wel.k;
+  cue(0, 0, () => (S(wel.el).op = 1));
+  cue(0, 1.1, (p) => { const q = E.ui(p); const s = S(main.el); place(s, MID, CY + 70 * (1 - q), 0.94 + 0.06 * q); s.op = q; });
+  // splash: the dot sits in the middle of the screen and breathes out two rings
+  const SPL = { x: 195 - 66, y: 422 - 208, s: 2.2 };
+  cue(0, 0, () => {});
+  for (const e of [wk.dot, wk.ring1, wk.ring2]) base(e, { tx: SPL.x, ty: SPL.y, sc: SPL.s });
+  base(wk.tile, { op: 0 });
+  base(wk.ring1, { op: 0, tx: SPL.x, ty: SPL.y });
+  base(wk.ring2, { op: 0, tx: SPL.x, ty: SPL.y });
+  [0.55, 1.05].forEach((t0, i) => {
+    const r = i ? wk.ring2 : wk.ring1;
+    cue(t0, 1.3, (p) => { const s = S(r); s.op = p < 1 ? 0.9 * Math.sin(Math.PI * Math.min(1, p * 1.15)) * (1 - p) : 0; s.sc = 0.5 + 1.1 * E.out(p); s.tx = SPL.x; s.ty = SPL.y; });
+  });
+  cue(0.1, 2.2, (p) => { const s = S(wk.dot); s.sc = SPL.s * (1 + 0.05 * Math.sin(p * Math.PI * 2)); });
+  const T_MORPH = 2.25;
+  cue(T_MORPH, 0.9, (p) => {
+    const q = E.io(p);
+    for (const e of [wk.dot]) { const s = S(e); s.tx = SPL.x * (1 - q); s.ty = SPL.y * (1 - q); s.sc = lerp(SPL.s, 1, q); }
+    const t = S(wk.tile); t.op = clamp((p - 0.5) / 0.5); t.sc = 0.9 + 0.1 * E.out(t.op);
+  });
+  cue(T_MORPH + 0.1, 1.0, (p) => { const q = E.io(p); place(S(main.el), lerp(MID, CX, q), CY, 1); });
+  stagger([wk.title, wk.body], T_MORPH + 0.55, 0.1, 0.7, 18);
+  stagger([wk.go, wk.sign], T_MORPH + 0.8, 0.1, 0.7, 18);
+  capShow(caps[0], T_MORPH + 0.6);
+  tap(main, 300, 712, 4.65, wk.go);
+
+  // ---------- 1. connect devices ----------
+  let T = 5.0;
+  const con = mount(main, scrConnect());
+  const ck = con.k;
+  rise(wel.el, con.el, T, 0.7);
+  capHide(caps[0], T);
+  capShow(caps[1], T + 0.5);
+  // searching: the orbits flow and the phone and watch float
+  cue(T, 4.4, (p, e) => {
+    ['o1', 'o2', 'o3', 'o4'].forEach((n, i) => ck[n].setAttribute('stroke-dashoffset', String((-(e + 10) * (16 + i * 4)).toFixed(1))));
+    ck.ph.setAttribute('transform', `translate(0 ${(Math.sin((e + 10) * 1.6) * 4).toFixed(2)})`);
+    ck.wa.setAttribute('transform', `translate(0 ${(Math.sin((e + 10) * 1.6 + 1.7) * 4).toFixed(2)})`);
+    S(ck.spin).rot = ((e * 360 * 1.1) | 0) - (((e * 360 * 1.1) | 0) % 45);
+  });
+  stagger([ck.title, ck.body], T + 0.3, 0.08, 0.7, 18);
+  base(ck.illu, { op: 0 }); cue(T + 0.55, 0.8, (p) => { const q = E.ui(p); const s = S(ck.illu); s.op = q; s.sc = 0.94 + 0.06 * q; });
+  fadeUp(ck.searching, T + 0.8, 0.6, 10);
+  fadeUp(ck.skip, T + 0.8, 0.6, 10);
+  const T_FOUND = T + 2.7;
+  cue(T_FOUND, 0.45, (p) => { const q = E.in(p); const s = S(ck.illu); s.op = (s.op ?? 1) * (1 - q); s.sc = (s.sc ?? 1) * (1 - 0.06 * q); const t = S(ck.searching); t.op = (t.op ?? 1) * (1 - q); });
+  base(ck.card, { op: 0 });
+  cue(T_FOUND + 0.3, 0.75, (p) => { const q = E.ui(p); const s = S(ck.card); s.op = q; s.ty = 40 * (1 - q); s.sc = 0.97 + 0.03 * q; });
+  base(ck.connected, { op: 0 });
+  const T_CONN = T_FOUND + 1.55;
+  tap(main, 60, 556, T_CONN, ck.connect);
+  cue(T_CONN + 0.18, 0.4, (p) => { const q = E.ui(p); S(ck.connect).op = 1 - q; const s = S(ck.connected); s.op = q; s.sc = 0.9 + 0.1 * q; });
+  cue(T_CONN + 0.45, 0.3, (p) => { const s = S(ck.skip); s.op = (s.op ?? 1) * (1 - E.out(p)); });
+  base(ck.go, { op: 0 }); cue(T_CONN + 0.55, 0.6, (p) => { const q = E.ui(p); const s = S(ck.go); s.op = q; s.ty = 18 * (1 - q); });
+  const T_FWD = T_CONN + 1.45;
+  tap(main, 282, 760, T_FWD, ck.go);
+
+  // ---------- 2. getting to know you ----------
+  T = T_FWD + 0.35;
+  const intro = mount(main, scrIntro());
+  const ik = intro.k;
+  rise(con.el, intro.el, T, 0.7);
+  capHide(caps[1], T);
+  capShow(caps[2], T + 0.5);
+  stagger([ik.icon, ik.title, ik.body], T + 0.3, 0.09, 0.7, 18);
+  stagger([ik.ok, ik.later], T + 0.6, 0.08, 0.6, 14);
+  const T_READY = T + 1.9;
+  tap(main, 277, 701, T_READY, ik.ok);
+
+  // the questionnaire
+  const qs = scrQuestions([
+    { n: '1 of 5', q: 'Do you have a vision number?', w: 250, buttons: [['Yes, I do', '', BR[0], 680, BR[1]], ['No, I don’t', '', BR[0], 740, BR[1]]] },
+    { n: '2 of 5', q: 'Have you gotten your eyes checked in the past 6 months?', w: 275, buttons: [['Yes, I have', '', BR[0], 680, BR[1]], ['Skip the question', 'gry', 42, 740, 158], ['No, I haven’t', '', BR[0], 740, BR[1]]] },
+    { n: '3 of 5', q: 'Do you follow any eye care routines?', w: 260, buttons: [['Yes, I do', '', BR[0], 680, BR[1]], ['Skip the question', 'gry', 42, 740, 158], ['No, I don’t', '', BR[0], 740, BR[1]]] },
+    { n: '4 of 5', q: 'Do you wear your glasses regularly?', w: 270, buttons: [['Daily', '', BR[0], 680, BR[1]], ['Only when necessary', '', 184, 740, 179]] },
+    { n: '5 of 5', q: 'Do you have any medical history related to your eyesight?', w: 270, buttons: [['Yes, I do', '', BR[0], 680, BR[1]], ['No, I don’t', '', BR[0], 740, BR[1]]] },
+  ], ['My vision number is<br>-0.5 and -0.75', 'Number since the past<br>2 years', 'Last checkup was more<br>than 6 months ago', 'No eye care routine', 'Wears glasses when<br>necessary']);
+  mount(main, qs);
+  const qk = qs.k;
+  for (let i = 0; i < 5; i++) base(qk['s' + i], { op: 0 });
+  for (let i = 0; i < 5; i++) base(qk['q' + i], { op: 0 });
+
+  // swap question i-1 -> i inside the questionnaire
+  function qSwap(i, t0) {
+    if (i > 0) cue(t0, 0.35, (p) => { const q = E.out(p); const s = S(qk['q' + (i - 1)]); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 22 * q; if (p >= 1) s.op = 0; });
+    cue(t0 + 0.18, 0.65, (p) => { const q = E.ui(p); const s = S(qk['q' + i]); s.op = q; s.ty = 26 * (1 - q); });
+  }
+  function sumIn(i, t0) { cue(t0, 0.6, (p) => { const q = E.ui(p); const s = S(qk['s' + i]); s.op = q; s.ty = 10 * (1 - q); }); }
+
+  T = T_READY + 0.35;
+  rise(intro.el, qs.el, T, 0.6);
+  base(qk.q0, { op: 0 }); cue(T + 0.1, 0.7, (p) => { const q = E.ui(p); const s = S(qk.q0); s.op = q; s.ty = 20 * (1 - q); });
+  const T_Q1 = T + 1.35;
+  tap(main, 294, 701, T_Q1, qk.b0_0);
+
+  // vision-number form, typed in
+  const vn = mount(main, scrVisionNumber());
+  const vk = vn.k;
+  T = T_Q1 + 0.3;
+  rise(qs.el, vn.el, T, 0.6);
+  stagger([vk.t1, vk.f1, vk.t2, vk.f2, vk.go], T + 0.15, 0.06, 0.6, 14);
+  typeInto(vk.f1, '-0.5 and -0.75', T + 1.0, 0.06);
+  typeInto(vk.f2, '2 years', T + 2.25, 0.07);
+  const T_VN = T + 3.25;
+  tap(main, 280, 761, T_VN, vk.go);
+
+  // back to the questionnaire with the first two answers on top
+  T = T_VN + 0.3;
+  cue(T, 0.4, (p) => { const s = S(vn.el); s.op = 1 - E.out(p); s.ty = -18 * E.out(p); if (p >= 1) s.op = 0; });
+  cue(T + 0.1, 0, () => {});
+  cue(T + 0.1, 0.6, (p) => { const q = E.ui(p); const s = S(qs.el); s.op = q; s.ty = 0; s.z = ++zc; });
+  cue(T + 0.1, 0, () => { S(qk.q0).op = 0; });
+  sumIn(0, T + 0.2); sumIn(1, T + 0.32);
+  cue(T + 0.3, 0.65, (p) => { const q = E.ui(p); const s = S(qk.q1); s.op = q; s.ty = 26 * (1 - q); });
+  const STEP = 1.55;
+  let tq = T + 1.35;
+  tap(main, 294, 761, tq, qk.b1_2);                    // No, I haven't
+  sumIn(2, tq + 0.3); qSwap(2, tq + 0.3);
+  tq += STEP;
+  tap(main, 294, 761, tq, qk.b2_2);                    // No, I don't
+  sumIn(3, tq + 0.3); qSwap(3, tq + 0.3);
+  tq += STEP;
+  tap(main, 273, 761, tq, qk.b3_1);                    // Only when necessary
+  sumIn(4, tq + 0.3); qSwap(4, tq + 0.3);
+  tq += STEP;
+  tap(main, 294, 701, tq, qk.b4_0);                    // Yes, I do
+
+  // medical history form
+  const md = mount(main, scrMedical());
+  const mk = md.k;
+  T = tq + 0.3;
+  rise(qs.el, md.el, T, 0.65);
+  stagger([mk.t1, mk.f1, mk.t2, mk.f2, mk.t3, mk.f3, mk.go], T + 0.15, 0.06, 0.6, 14);
+  const T_MED = T + 1.9;
+  tap(main, 280, 761, T_MED, mk.go);
+
+  // ---------- 3. summary ----------
+  T = T_MED + 0.35;
+  const sum = mount(main, scrSummary());
+  const sk = sum.k;
+  rise(md.el, sum.el, T, 0.7, 30);
+  capHide(caps[2], T);
+  capShow(caps[3], T + 0.5);
+  cue(T + 0.3, 0.7, (p) => { const q = E.ui(p); const s = S(tb.el); s.op = q; s.ty = 30 * (1 - q); });
+  tabTo(tb, 0, T + 0.3, 0.01);
+  stagger([sk.date, sk.title, sk.prof, sk.act, sk.see, sk.card, sk.bars, sk.rec, sk.c0, sk.c1, sk.c2, sk.c3], T + 0.25, 0.045, 0.7, 18);
+  [['b0', 0.4], ['b1', 0.24], ['b2', 0.7]].forEach(([k, v], i) => {
+    base(sk[k], { w: 0 });
+    cue(T + 0.9 + i * 0.12, 1.1, (p) => { const q = E.ui(p); S(sk[k]).w = 289 * v * q; S(sk[k + 'l']).op = q; S(sk[k + 'l']).tx = -289 * v * (1 - q); });
+  });
+  const T_TAB_A = T + 2.9;
+  tap(main, 196, 812, T_TAB_A, null);
+
+  // ---------- 4. analysis ----------
+  T = T_TAB_A + 0.15;
+  const an = mount(main, scrAnalysis());
+  const ak = an.k;
+  xfade(sum.el, an.el, T, 0.35, 10);
+  tabTo(tb, 1, T);
+  capHide(caps[3], T);
+  capShow(caps[4], T + 0.5);
+  [['a0', 0.75], ['a1', 0.45], ['a2', 1]].forEach(([k, v], i) => {
+    base(ak[k], { h: 0 });
+    cue(T + 0.35 + i * 0.1, 0.9, (p) => (S(ak[k]).h = 150 * v * E.ui(p)));
+  });
+  // the screen-distance alert
+  const T_AL = T + 2.0;
+  cue(T_AL, 0.45, (p) => { const q = E.ui(p); S(al.el).op = q; S(al.k.veil).op = q; });
+  cue(T_AL + 0.15, 0.55, (p) => { const q = E.ui(p); const s = S(al.k.close); s.op = q; s.ty = 16 * (1 - q); });
+  cue(T_AL, 2.2, (p, e) => {                         // chevrons ripple upward
+    [al.k.c0, al.k.c1, al.k.c2].forEach((c, i) => {
+      const w = 0.5 + 0.5 * Math.sin((e * 2 * Math.PI) / 1.1 - i * 0.9);
+      c.setAttribute('opacity', (0.35 + 0.65 * w).toFixed(2));
+    });
+  });
+  const T_OK = T_AL + 2.1;
+  cue(T_OK, 0.4, (p) => { const q = E.out(p); const s = S(al.k.close); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 10 * q; });
+  cue(T_OK + 0.2, 0.55, (p) => { const q = E.ui(p); const s = S(al.k.ok); s.op = q; s.ty = 10 * (1 - q); });
+  cue(T_OK + 0.25, 0.9, (p) => {
+    al.k.ring.setAttribute('stroke-dashoffset', (88 * (1 - E.ui(clamp(p / 0.7)))).toFixed(2));
+    al.k.tick.setAttribute('stroke-dashoffset', (20 * (1 - E.ui(clamp((p - 0.45) / 0.55)))).toFixed(2));
+  });
+  const T_ALX = T_OK + 1.8;
+  cue(T_ALX, 0.5, (p) => { const q = E.out(p); const s = S(al.el); s.op = (s.op ?? 1) * (1 - q); if (p >= 1) s.op = 0; });
+  // scroll to the daylight chart
+  const T_SC = T_ALX + 0.5;
+  cue(T_SC, 1.3, (p) => (S(ak.scroll).ty = -534 * E.io(p)));
+  DAY.forEach(([, v], i) => {
+    base(ak['d' + i], { h: 0 });
+    cue(T_SC + 0.7 + i * 0.06, 0.9, (p) => (S(ak['d' + i]).h = v * (210 / 150) * E.ui(p)));
+  });
+  countUp(ak.avg, 90, T_SC + 0.7, 1.0);
+  const T_TAB_S = T_SC + 2.7;
+  tap(main, 317, 812, T_TAB_S, null);
+
+  // sharing
+  T = T_TAB_S + 0.15;
+  const sh = mount(main, scrSharing());
+  const hk = sh.k;
+  xfade(an.el, sh.el, T, 0.35, 10);
+  tabTo(tb, 2, T);
+  [['s0', 62], ['s1', 160], ['s2', 116]].forEach(([k, v], i) => { base(hk[k], { h: 0 }); cue(T + 0.3 + i * 0.1, 0.9, (p) => (S(hk[k]).h = v * E.ui(p))); });
+  base(hk.f0, {}); base(hk.f1, {});
+  const T_TAB_H = T + 2.0;
+  tap(main, 71, 812, T_TAB_H, null);
+
+  // back to the summary; open Eye Exercises
+  T = T_TAB_H + 0.15;
+  const sum2 = mount(main, scrSummary());
+  xfade(sh.el, sum2.el, T, 0.35, 10);
+  tabTo(tb, 0, T);
+  const T_MORE = T + 1.0;
+  tap(main, 130, 609, T_MORE, sum2.k.c0m);
+
+  T = T_MORE + 0.25;
+  const ex = mount(main, scrActivity(ACT.ex));
+  push(sum2.el, ex.el, T, 0.65);
+  capHide(caps[4], T + 1.3);
+
+  // ---------- 5. the four activity pages side by side ----------
+  const T_SPREAD = T + 1.3;
+  const SP = { s: 0.8, xs: [372, 764, 1156, 1548], y: 600 };
+  const others = [ACT.te, ACT.ga, null].map((o, i) => {
+    const ph = makePhone();
+    const t = tabbar(ph); base(t.el, { op: 1 }); base(t.k.on0, { op: 1 });
+    const scr = mount(ph, o ? scrActivity(o) : scrEducation());
+    base(scr.el, { op: 1 });
+    return { ph, scr, i: i + 1 };
+  });
+  const hd = heading('06', 'Exercises, tests, games and reading');
+  base(hd.k.n, { op: 0 }); base(hd.k.h, { op: 0 });
+  cue(T_SPREAD, 1.1, (p) => { const q = E.io(p); place(S(main.el), lerp(CX, SP.xs[0], q), lerp(CY, SP.y, q), lerp(1, SP.s, q)); });
+  others.forEach(({ ph, scr, i }) => {
+    const t0 = T_SPREAD + 0.12 + i * 0.09;
+    cue(t0, 1.05, (p) => { const q = E.ui(p); const s = S(ph.el); place(s, SP.xs[i] + 240 * (1 - q), SP.y + 30 * (1 - q), SP.s * (0.96 + 0.04 * q)); s.op = clamp(p * 2.2); });
+    const k = scr.k;
+    const items = [k.title, k.see, k.main, k.sc, k.sk, k.r0, k.r1, k.r2, k.r3, k.e0, k.e1, k.e2, k.e3, k.e4, k.e5].filter(Boolean);
+    stagger(items, t0 + 0.3, 0.045, 0.65, 16);
+  });
+  [hd.k.n, hd.k.h].forEach((e, i) => cue(T_SPREAD + 0.5 + i * 0.08, 0.8, (p) => { const q = E.ui(p); const s = S(e); s.op = q; s.ty = 18 * (1 - q); }));
+  // the score numbers count up on the three activity pages
+  [ex, others[0].scr, others[1].scr].forEach((scr, j) => {
+    const o = [ACT.ex, ACT.te, ACT.ga][j];
+    countUp(scr.k.score, o.score, T_SPREAD + 0.6 + j * 0.1, 1.2);
+  });
+
+  // focus on Eye Games
+  const T_FOCUS = T_SPREAD + 3.6;
+  const games = others[1];
+  [hd.k.n, hd.k.h].forEach((e) => cue(T_FOCUS, 0.4, (p) => { const s = S(e); s.op = (s.op ?? 1) * (1 - E.in(p)); }));
+  [{ ph: main, i: 0 }, others[0], others[2]].forEach(({ ph, i }, j) => {
+    cue(T_FOCUS + j * 0.05, 0.75, (p) => { const q = E.in(p); const s = S(ph.el); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) + 40 * q; s.sc = (s.sc ?? 1) * (1 - 0.04 * q); });
+  });
+  cue(T_FOCUS + 0.25, 1.2, (p) => { const q = E.io(p); place(S(games.ph.el), lerp(SP.xs[2], CX, q), lerp(SP.y, CY, q), lerp(SP.s, 1, q)); S(games.ph.el).op = 1; });
+  capShow(caps[5], T_FOCUS + 0.9);
+
+  // ---------- 6. color match ----------
+  const G = games.ph;
+  const gtb = { el: G.screen.querySelector('.tabbar') };
+  const T_CM = T_FOCUS + 2.0;
+  tap(G, 80, 230, T_CM, games.scr.k.main);
+  T = T_CM + 0.25;
+  const ci = mount(G, scrColorIntro());
+  const cik = ci.k;
+  push(games.scr.el, ci.el, T, 0.65);
+  cue(T, 0.45, (p) => { const s = S(gtb.el); s.op = 1 - E.out(p); s.ty = 20 * E.out(p); });
+  base(cik.p2, { op: 0 }); base(cik.d0b, { op: 0 }); base(cik.d1b, { op: 0 });
+  cue(T + 0.5, 1.6, (p, e) => { const s = S(cik.ball); s.ty = -6 * Math.sin(e * 2.4); });
+  // swipe to the instructions page
+  const T_SW = T + 1.9;
+  cue(T_SW - 0.3, 0.9, (p, e) => {
+    const s = S(G.touch); const u = e - 0.3;
+    if (u < 0) { s.op = E.out(clamp((u + 0.3) / 0.25)); s.tx = 300; s.ty = 560; s.sc = 1; }
+    else { const q = E.io(clamp(u / 0.4)); s.tx = 300 - 200 * q; s.ty = 560; s.op = u > 0.4 ? 1 - E.out(clamp((u - 0.4) / 0.2)) : 1; s.sc = 0.88; }
+    if (p >= 1) s.op = 0;
+  });
+  cue(T_SW, 0.55, (p) => {
+    const q = E.push(p);
+    const a = S(cik.p1); a.tx = -390 * q; a.op = 1;
+    const b = S(cik.p2); b.tx = 390 * (1 - q); b.op = 1;
+    S(cik.d0b).op = q; S(cik.d1b).op = q;
+  });
+  cue(T_SW + 0.4, 2.2, (p, e) => { S(cik.wheel).rot = e * 40; S(cik.halo).rot = e * 40; });
+  base(cik.wheel, {}); base(cik.halo, {});
+  cue(T_SW + 0.1, 2.5, (p, e) => { const s = S(cik.halo); s.op = 0.75 + 0.25 * Math.sin(e * 3); });
+  const T_START = T_SW + 1.6;
+  tap(G, 282, 766, T_START, cik.go);
+
+  // the game
+  T = T_START + 0.3;
+  const gm = mount(G, scrGame());
+  const gk = gm.k;
+  xfade(ci.el, gm.el, T, 0.45, 0);
+  base(gk.cnt, { txt: 'will start in 3' });
+  base(gk.disc, { op: 0 }); base(gk.knob, { op: 0 }); base(gk.confirm, { op: 0 });
+  cue(T + 0.1, 0.8, (p) => { const q = E.ui(p); const s = S(gk.wheel); s.sc = 0.86 + 0.14 * q; s.rot = -40 * (1 - q); });
+  ['3', '2', '1'].forEach((n, i) => cue(T + 0.4 + i * 0.55, 0, () => (S(gk.cnt).txt = 'will start in ' + n)));
+  const T_PLAY = T + 2.05;
+  cue(T_PLAY, 0.35, (p) => { const q = E.out(p); S(gk.hue).op = 1 - q; S(gk.cnt).op = 1 - q; S(gk.hue).sc = 1 - 0.1 * q; });
+  const knobAt = (s, deg) => { const r = 118.5, a = (deg - 90) * Math.PI / 180; s.tx = 195 + r * Math.cos(a); s.ty = 436 + r * Math.sin(a); };
+  // two rounds: orange, then magenta
+  const rounds = [{ t: T_PLAY + 0.2, from: 10, to: 87, col: 'hsl(33 92% 52%)' }, { t: T_PLAY + 2.6, from: 87, to: 182, col: 'hsl(300 95% 50%)' }];
+  rounds.forEach((r, i) => {
+    cue(r.t, 0.5, (p) => { const q = E.ui(p); const s = S(gk.disc); s.op = q; s.sc = 0.6 + 0.4 * q; s.bg = r.col; });
+    cue(r.t, 0.35, (p) => { const s = S(gk.knob); s.op = E.out(p); knobAt(s, r.from); });
+    cue(r.t + 0.45, 1.05, (p) => { const s = S(gk.knob); s.op = 1; knobAt(s, lerp(r.from, r.to, E.io(p))); });
+    // timer slice sweeping round the disc
+    cue(r.t + 0.3, 1.9, (p) => { S(gk.pie).bg = `conic-gradient(rgba(220,30,40,.55) 0deg ${(360 * p * 0.55).toFixed(1)}deg, transparent ${(360 * p * 0.55).toFixed(1)}deg)`; });
+    cue(r.t + 1.55, 0.35, (p) => { const s = S(gk.confirm); s.op = E.ui(p); });
+    const at = r.t + 2.05;
+    tap(G, 195, 436, at, gk.disc);
+    cue(at + 0.12, 0.3, (p) => { const s = S(gk.confirm); s.op = (s.op ?? 1) * (1 - E.out(p)); });
+    cue(at + 0.15, 0.4, (p) => { S(gk.pie).bg = 'transparent'; const s = S(gk.disc); s.sc = (s.sc ?? 1) * (1 + 0.12 * Math.sin(Math.PI * p)); });
+  });
+  const T_RES = T_PLAY + 5.0;
+  cue(T_RES - 0.4, 0.4, (p) => { const s = S(gk.disc); s.op = (s.op ?? 1) * (1 - E.out(p)); S(gk.knob).op = (S(gk.knob).op ?? 1) * (1 - E.out(p)); });
+
+  // results
+  T = T_RES;
+  const rs = mount(G, scrResult());
+  const rk = rs.k;
+  rise(gm.el, rs.el, T, 0.65, 30);
+  stagger([rk.c1, rk.c2, rk.tell, rk.next], T + 0.2, 0.08, 0.7, 20);
+  [['x0', 172], ['x1', 98], ['x2', 144]].forEach(([k, w], i) => { base(rk[k], { w: 0 }); cue(T + 0.6 + i * 0.1, 1.0, (p) => { S(rk[k]).w = w * E.ui(p); S(rk[k + 'l']).op = E.ui(p); }); });
+  countUp(rk.score, 124, T + 0.5, 1.0);
+  [45, 127, 208, 289].forEach((x, i) => { const e = rk['fr' + x]; base(e, {}); cue(T + 0.9 + i * 0.07, 0.6, (p) => { const q = E.ui(p); const s = S(e); s.sc = 0.7 + 0.3 * q; s.op = q; }); });
+  const T_TELL = T + 2.5;
+  tap(G, 282, 698, T_TELL, rk.tell);
+
+  // ---------- 7. your experience ----------
+  T = T_TELL + 0.3;
+  const xp = scrQuestions([
+    { n: '1 of 4', q: 'Were you able to match the shades properly?', w: 260, buttons: [['Yes, most of them', '', 220, 680, 143], ['No, rarely', '', 220, 740, 143]] },
+    { n: '2 of 4', q: 'Did you experience any eye strain while focusing on the colors?', w: 300, buttons: [['Yes', '', BR[0], 680, BR[1]], ['No', '', BR[0], 740, BR[1]]] },
+    { n: '3 of 4', q: 'Did you find it difficult to distinguish between any two colors?', w: 300, buttons: [['Yes', '', BR[0], 680, BR[1]], ['No', '', BR[0], 740, BR[1]]] },
+    { n: '4 of 4', q: 'Any other experiences you would like to share from the game?', w: 300, field: 'Difficult to match shades', buttons: [['Skip the question', '', 195, 740, 160]] },
+    { n: '5 of 5', q: 'Would you like to schedule a virtual consultation with our doctor?', w: 310, buttons: [['Yes', '', BR[0], 680, BR[1]], ['No', '', BR[0], 740, BR[1]]] },
+  ], ['Could match the<br>shades', 'No strain was<br>experienced', 'No difficulty in<br>distinguishing the<br>colors'], { header: 'Eye Games', title: 'Your Experience', top: 165, sx: 30 });
+  mount(G, xp);
+  const xk = xp.k;
+  for (let i = 0; i < 3; i++) base(xk['s' + i], { op: 0 });
+  for (let i = 0; i < 5; i++) base(xk['q' + i], { op: 0 });
+  // move the field of question 4 up above its button
+  rise(rs.el, xp.el, T, 0.6);
+  capHide(caps[5], T);
+  capShow(caps[6], T + 0.5);
+  cue(T + 0.1, 0.7, (p) => { const q = E.ui(p); const s = S(xk.q0); s.op = q; s.ty = 20 * (1 - q); });
+  const xSwap = (i, t0) => {
+    cue(t0, 0.35, (p) => { const q = E.out(p); const s = S(xk['q' + (i - 1)]); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 22 * q; if (p >= 1) s.op = 0; });
+    cue(t0 + 0.18, 0.65, (p) => { const q = E.ui(p); const s = S(xk['q' + i]); s.op = q; s.ty = 26 * (1 - q); });
+  };
+  const xSum = (i, t0) => cue(t0, 0.6, (p) => { const q = E.ui(p); const s = S(xk['s' + i]); s.op = q; s.ty = 10 * (1 - q); });
+  const XS = 1.45;
+  let tx = T + 1.3;
+  tap(G, 291, 701, tx, xk.b0_0); xSum(0, tx + 0.3); xSwap(1, tx + 0.3); tx += XS;
+  tap(G, 294, 761, tx, xk.b1_1); xSum(1, tx + 0.3); xSwap(2, tx + 0.3); tx += XS;
+  tap(G, 294, 761, tx, xk.b2_1); xSum(2, tx + 0.3); xSwap(3, tx + 0.3); tx += XS;
+  tap(G, 280, 761, tx, xk.b3_0); xSwap(4, tx + 0.3); tx += XS;
+  tap(G, 294, 701, tx, xk.b4_0);
+
+  // ---------- 8. virtual consultation ----------
+  T = tx + 0.3;
+  const vc = mount(G, scrConsult());
+  const vck = vc.k;
+  push(xp.el, vc.el, T, 0.65);
+  cue(T + 0.2, 0.6, (p) => { const q = E.ui(p); const s = S(gtb.el); s.op = q; s.ty = 20 * (1 - q); });
+  const gtbOn = G.screen.querySelector('.tabbar').querySelectorAll('.on');
+  cue(T + 0.2, 0, () => { S(gtbOn[0]).op = 0; S(gtbOn[2]).op = 1; });
+  base(gtbOn[2], { op: 0 });
+  capHide(caps[6], T);
+  capShow(caps[7], T + 0.5);
+  stagger([vck.d0, vck.d1, vck.d2, vck.d3], T + 0.45, 0.09, 0.7, 24);
+
+  // ---------- 9. finale: three highlights, then the logo ----------
+  const T_FIN = T + 3.0;
+  capHide(caps[7], T_FIN);
+  const FS = { s: 0.84, xs: [560, 960, 1360], y: 548 };
+  const finSharing = (() => { const ph = makePhone(); const t = tabbar(ph); base(t.el, { op: 1 }); base(t.k.on2, { op: 1 }); const s = mount(ph, scrSharing()); base(s.el, { op: 1 }); return ph; })();
+  const finAnalysis = (() => { const ph = makePhone(); const t = tabbar(ph); base(t.el, { op: 1 }); base(t.k.on1, { op: 1 }); const s = mount(ph, scrAnalysis()); base(s.el, { op: 1 }); base(s.k.scroll, { ty: -534 }); return ph; })();
+  cue(T_FIN, 1.2, (p) => { const q = E.io(p); place(S(G.el), lerp(CX, FS.xs[2], q), lerp(CY, FS.y, q), lerp(1, FS.s, q)); S(G.el).op = 1; });
+  [finAnalysis, finSharing].forEach((ph, i) => {
+    const t0 = T_FIN + 0.2 + i * 0.12;
+    cue(t0, 1.1, (p) => { const q = E.ui(p); const s = S(ph.el); place(s, FS.xs[i] - 200 * (1 - q), FS.y + 30 * (1 - q), FS.s); s.op = clamp(p * 2.2); });
+  });
+  const T_END = T_FIN + 3.4;
+  [finAnalysis, finSharing, G].forEach((ph, i) => {
+    cue(T_END + i * 0.08, 0.8, (p) => { const q = E.in(p); const s = S(ph.el); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) + 50 * q; });
+  });
+  const end = el(`<div class="m" style="left:0;top:0;width:1920px;height:1080px">
+    <div class="a appicon" data-k="icon" style="left:902px;top:338px;width:116px;height:116px;border-radius:27px;box-shadow:0 0 0 1.5px #e1e4ea, 0 20px 40px -12px rgba(30,60,120,.25)"><div class="a dot" style="left:14px;top:14px;width:88px;height:88px"></div></div>
+    <div class="a" data-k="name" style="left:0;top:488px;width:1920px;text-align:center;font-size:64px;font-weight:600;letter-spacing:-.03em;color:#12151b">Vision Health</div>
+    <div class="a" data-k="tag" style="left:0;top:578px;width:1920px;text-align:center;font-size:24px;color:#5c6574">An eye-health companion for Apple Health</div>
+  </div>`);
+  stage.appendChild(end);
+  const ek = refs(end);
+  base(ek.icon, { op: 0 });
+  cue(T_END + 0.6, 0.9, (p) => { const q = E.ui(p); const s = S(ek.icon); s.op = q; s.sc = 0.7 + 0.3 * q; });
+  stagger([ek.name, ek.tag], T_END + 0.85, 0.12, 0.8, 20);
+
+  const DURATION = Math.ceil((T_END + 3.4) * 10) / 10;
+
+  // =====================================================================
+  //                         playback & export
+  // =====================================================================
+  function renderAt(t) {
+    FRAME++;
+    for (const c of cues) {
+      if (t < c.t0) continue;
+      const el = t - c.t0;
+      c.fn(c.dur > 0 ? clamp(el / c.dur) : 1, el);
+    }
+    flush();
+  }
+
+  const frame = document.getElementById('frame');
+  function fit() { if (!document.body.classList.contains('export')) stage.style.transform = `scale(${frame.clientWidth / 1920})`; }
+  window.addEventListener('resize', fit); fit();
+
+  const scrub = document.getElementById('scrub'), playBtn = document.getElementById('play'), meta = document.getElementById('meta');
+  let playing = true, t0 = performance.now(), tNow = 0, exporting = false;
+  function tick(now) {
+    if (exporting) return;
+    if (playing) { tNow = ((now - t0) / 1000) % DURATION; renderAt(tNow); scrub.value = String(Math.round((tNow / DURATION) * 1000)); meta.textContent = `${tNow.toFixed(2)} s / ${DURATION} s · 1920 × 1080 · 60 fps`; }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  playBtn.onclick = () => { playing = !playing; playBtn.textContent = playing ? 'Pause' : 'Play'; if (playing) t0 = performance.now() - tNow * 1000; };
+  scrub.oninput = () => { playing = false; playBtn.textContent = 'Play'; tNow = (scrub.value / 1000) * DURATION; renderAt(tNow); meta.textContent = `${tNow.toFixed(2)} s / ${DURATION} s`; };
+
+  window.anim = {
+    timeline: { duration: DURATION, fps: 60 },
+    ready: Promise.all([document.fonts.ready, ...[...document.images].map((i) => i.decode().catch(() => {}))]),
+    exportMode(on) { exporting = on; document.body.classList.toggle('export', on); stage.style.transform = on ? 'none' : ''; if (!on) fit(); },
+    renderAt,
+  };
+})();
+</script>
+</body>
+</html>

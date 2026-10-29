@@ -2,3 +2,5 @@ node_modules
 .DS_Store
 __pycache__/
 systemmap/trace/lost-*.png
+vision/exports/stills/
+vision/exports/part-*.mp4
