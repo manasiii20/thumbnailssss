@@ -759,97 +759,75 @@
   // =====================================================================
   //                              TIMELINE
   // =====================================================================
-  const CX = 1275, CY = 540;       // the phone's resting place next to the captions
-  const MID = 960;
+  // Screens only, about 19 s: onboarding gets most of the time, then the
+  // summary and analysis, then four more screens side by side.
+  const CX = 960, CY = 540;
   const main = makePhone();
   const tb = tabbar(main);
   const al = alertLayer(main);
 
-  const caps = [
-    caption('01', 'Welcome', 'Vision Health is an eye-health app that works as a companion to Apple Health.'),
-    caption('02', 'Connect your devices', 'Pair a smartwatch so Vision Health can record your time spent in daylight.'),
-    caption('03', 'Getting to know you', 'Five quick questions make every recommendation personal.'),
-    caption('04', 'Your daily summary', 'Eye exercises, tests and games, with today’s progress at a glance.'),
-    caption('05', 'Analysis', 'Activity, time in daylight, and a gentle nudge when the screen is too close.'),
-    caption('07', 'Color Match', 'A color-wheel game that sharpens shade perception and motor control.'),
-    caption('08', 'Your experience', 'A short check-in after every game.'),
-    caption('09', 'Virtual consultation', 'When something feels off, an eye doctor is a tap away.'),
-  ];
-  caps.forEach((c) => { const r = 540 - 110; c.el.style.top = r + 'px'; });
-
-  // ---------- 0. intro: splash dot, then the welcome screen ----------
+  // ---------- 0. splash dot -> welcome ----------
   const wel = mount(main, scrWelcome());
   const wk = wel.k;
   cue(0, 0, () => (S(wel.el).op = 1));
-  cue(0, 1.1, (p) => { const q = E.ui(p); const s = S(main.el); place(s, MID, CY + 70 * (1 - q), 0.94 + 0.06 * q); s.op = q; });
-  // splash: the dot sits in the middle of the screen and breathes out two rings
+  cue(0, 0.9, (p) => { const q = E.ui(p); const s = S(main.el); place(s, CX, CY + 60 * (1 - q), 0.95 + 0.05 * q); s.op = q; });
   const SPL = { x: 195 - 66, y: 422 - 208, s: 2.2 };
-  cue(0, 0, () => {});
-  for (const e of [wk.dot, wk.ring1, wk.ring2]) base(e, { tx: SPL.x, ty: SPL.y, sc: SPL.s });
+  for (const e of [wk.dot]) base(e, { tx: SPL.x, ty: SPL.y, sc: SPL.s });
   base(wk.tile, { op: 0 });
   base(wk.ring1, { op: 0, tx: SPL.x, ty: SPL.y });
   base(wk.ring2, { op: 0, tx: SPL.x, ty: SPL.y });
-  [0.55, 1.05].forEach((t0, i) => {
+  [0.2, 0.5].forEach((t0, i) => {
     const r = i ? wk.ring2 : wk.ring1;
-    cue(t0, 1.3, (p) => { const s = S(r); s.op = p < 1 ? 0.9 * Math.sin(Math.PI * Math.min(1, p * 1.15)) * (1 - p) : 0; s.sc = 0.5 + 1.1 * E.out(p); s.tx = SPL.x; s.ty = SPL.y; });
+    cue(t0, 1.0, (p) => { const s = S(r); s.op = p < 1 ? 0.9 * Math.sin(Math.PI * Math.min(1, p * 1.15)) * (1 - p) : 0; s.sc = 0.5 + 1.1 * E.out(p); s.tx = SPL.x; s.ty = SPL.y; });
   });
-  cue(0.1, 2.2, (p) => { const s = S(wk.dot); s.sc = SPL.s * (1 + 0.05 * Math.sin(p * Math.PI * 2)); });
-  const T_MORPH = 2.25;
-  cue(T_MORPH, 0.9, (p) => {
+  const T_MORPH = 0.95;
+  cue(T_MORPH, 0.75, (p) => {
     const q = E.io(p);
-    for (const e of [wk.dot]) { const s = S(e); s.tx = SPL.x * (1 - q); s.ty = SPL.y * (1 - q); s.sc = lerp(SPL.s, 1, q); }
+    const s = S(wk.dot); s.tx = SPL.x * (1 - q); s.ty = SPL.y * (1 - q); s.sc = lerp(SPL.s, 1, q);
     const t = S(wk.tile); t.op = clamp((p - 0.5) / 0.5); t.sc = 0.9 + 0.1 * E.out(t.op);
   });
-  cue(T_MORPH + 0.1, 1.0, (p) => { const q = E.io(p); place(S(main.el), lerp(MID, CX, q), CY, 1); });
-  stagger([wk.title, wk.body], T_MORPH + 0.55, 0.1, 0.7, 18);
-  stagger([wk.go, wk.sign], T_MORPH + 0.8, 0.1, 0.7, 18);
-  capShow(caps[0], T_MORPH + 0.6);
-  tap(main, 300, 712, 4.65, wk.go);
+  stagger([wk.title, wk.body], T_MORPH + 0.4, 0.08, 0.6, 16);
+  stagger([wk.go, wk.sign], T_MORPH + 0.55, 0.08, 0.6, 16);
+  tap(main, 300, 712, 2.15, wk.go);
 
   // ---------- 1. connect devices ----------
-  let T = 5.0;
+  let T = 2.4;
   const con = mount(main, scrConnect());
   const ck = con.k;
-  rise(wel.el, con.el, T, 0.7);
-  capHide(caps[0], T);
-  capShow(caps[1], T + 0.5);
-  // searching: the orbits flow and the phone and watch float
-  cue(T, 4.4, (p, e) => {
+  rise(wel.el, con.el, T, 0.55);
+  cue(T, 3.2, (p, e) => {
     ['o1', 'o2', 'o3', 'o4'].forEach((n, i) => ck[n].setAttribute('stroke-dashoffset', String((-(e + 10) * (16 + i * 4)).toFixed(1))));
-    ck.ph.setAttribute('transform', `translate(0 ${(Math.sin((e + 10) * 1.6) * 4).toFixed(2)})`);
-    ck.wa.setAttribute('transform', `translate(0 ${(Math.sin((e + 10) * 1.6 + 1.7) * 4).toFixed(2)})`);
-    S(ck.spin).rot = ((e * 360 * 1.1) | 0) - (((e * 360 * 1.1) | 0) % 45);
+    ck.ph.setAttribute('transform', `translate(0 ${(Math.sin((e + 10) * 2.2) * 4).toFixed(2)})`);
+    ck.wa.setAttribute('transform', `translate(0 ${(Math.sin((e + 10) * 2.2 + 1.7) * 4).toFixed(2)})`);
+    S(ck.spin).rot = ((e * 400) | 0) - (((e * 400) | 0) % 45);
   });
-  stagger([ck.title, ck.body], T + 0.3, 0.08, 0.7, 18);
-  base(ck.illu, { op: 0 }); cue(T + 0.55, 0.8, (p) => { const q = E.ui(p); const s = S(ck.illu); s.op = q; s.sc = 0.94 + 0.06 * q; });
-  fadeUp(ck.searching, T + 0.8, 0.6, 10);
-  fadeUp(ck.skip, T + 0.8, 0.6, 10);
-  const T_FOUND = T + 2.7;
-  cue(T_FOUND, 0.45, (p) => { const q = E.in(p); const s = S(ck.illu); s.op = (s.op ?? 1) * (1 - q); s.sc = (s.sc ?? 1) * (1 - 0.06 * q); const t = S(ck.searching); t.op = (t.op ?? 1) * (1 - q); });
+  stagger([ck.title, ck.body], T + 0.2, 0.07, 0.6, 16);
+  base(ck.illu, { op: 0 }); cue(T + 0.35, 0.65, (p) => { const q = E.ui(p); const s = S(ck.illu); s.op = q; s.sc = 0.94 + 0.06 * q; });
+  fadeUp(ck.searching, T + 0.45, 0.5, 10);
+  fadeUp(ck.skip, T + 0.45, 0.5, 10);
+  const T_FOUND = T + 1.15;
+  cue(T_FOUND, 0.35, (p) => { const q = E.in(p); const s = S(ck.illu); s.op = (s.op ?? 1) * (1 - q); s.sc = (s.sc ?? 1) * (1 - 0.06 * q); const t = S(ck.searching); t.op = (t.op ?? 1) * (1 - q); });
   base(ck.card, { op: 0 });
-  cue(T_FOUND + 0.3, 0.75, (p) => { const q = E.ui(p); const s = S(ck.card); s.op = q; s.ty = 40 * (1 - q); s.sc = 0.97 + 0.03 * q; });
+  cue(T_FOUND + 0.2, 0.6, (p) => { const q = E.ui(p); const s = S(ck.card); s.op = q; s.ty = 40 * (1 - q); s.sc = 0.97 + 0.03 * q; });
   base(ck.connected, { op: 0 });
-  const T_CONN = T_FOUND + 1.55;
+  const T_CONN = T_FOUND + 0.85;
   tap(main, 60, 556, T_CONN, ck.connect);
-  cue(T_CONN + 0.18, 0.4, (p) => { const q = E.ui(p); S(ck.connect).op = 1 - q; const s = S(ck.connected); s.op = q; s.sc = 0.9 + 0.1 * q; });
-  cue(T_CONN + 0.45, 0.3, (p) => { const s = S(ck.skip); s.op = (s.op ?? 1) * (1 - E.out(p)); });
-  base(ck.go, { op: 0 }); cue(T_CONN + 0.55, 0.6, (p) => { const q = E.ui(p); const s = S(ck.go); s.op = q; s.ty = 18 * (1 - q); });
-  const T_FWD = T_CONN + 1.45;
+  cue(T_CONN + 0.15, 0.35, (p) => { const q = E.ui(p); S(ck.connect).op = 1 - q; const s = S(ck.connected); s.op = q; s.sc = 0.9 + 0.1 * q; });
+  cue(T_CONN + 0.3, 0.25, (p) => { const s = S(ck.skip); s.op = (s.op ?? 1) * (1 - E.out(p)); });
+  base(ck.go, { op: 0 }); cue(T_CONN + 0.35, 0.5, (p) => { const q = E.ui(p); const s = S(ck.go); s.op = q; s.ty = 16 * (1 - q); });
+  const T_FWD = T_CONN + 0.85;
   tap(main, 282, 760, T_FWD, ck.go);
 
   // ---------- 2. getting to know you ----------
-  T = T_FWD + 0.35;
+  T = T_FWD + 0.25;
   const intro = mount(main, scrIntro());
   const ik = intro.k;
-  rise(con.el, intro.el, T, 0.7);
-  capHide(caps[1], T);
-  capShow(caps[2], T + 0.5);
-  stagger([ik.icon, ik.title, ik.body], T + 0.3, 0.09, 0.7, 18);
-  stagger([ik.ok, ik.later], T + 0.6, 0.08, 0.6, 14);
-  const T_READY = T + 1.9;
+  rise(con.el, intro.el, T, 0.55);
+  stagger([ik.icon, ik.title, ik.body], T + 0.2, 0.07, 0.6, 16);
+  stagger([ik.ok, ik.later], T + 0.4, 0.07, 0.5, 12);
+  const T_READY = T + 1.0;
   tap(main, 277, 701, T_READY, ik.ok);
 
-  // the questionnaire
   const qs = scrQuestions([
     { n: '1 of 5', q: 'Do you have a vision number?', w: 250, buttons: [['Yes, I do', '', BR[0], 680, BR[1]], ['No, I don’t', '', BR[0], 740, BR[1]]] },
     { n: '2 of 5', q: 'Have you gotten your eyes checked in the past 6 months?', w: 275, buttons: [['Yes, I have', '', BR[0], 680, BR[1]], ['Skip the question', 'gry', 42, 740, 158], ['No, I haven’t', '', BR[0], 740, BR[1]]] },
@@ -861,325 +839,124 @@
   const qk = qs.k;
   for (let i = 0; i < 5; i++) base(qk['s' + i], { op: 0 });
   for (let i = 0; i < 5; i++) base(qk['q' + i], { op: 0 });
-
-  // swap question i-1 -> i inside the questionnaire
   function qSwap(i, t0) {
-    if (i > 0) cue(t0, 0.35, (p) => { const q = E.out(p); const s = S(qk['q' + (i - 1)]); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 22 * q; if (p >= 1) s.op = 0; });
-    cue(t0 + 0.18, 0.65, (p) => { const q = E.ui(p); const s = S(qk['q' + i]); s.op = q; s.ty = 26 * (1 - q); });
+    cue(t0, 0.3, (p) => { const q = E.out(p); const s = S(qk['q' + (i - 1)]); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 20 * q; if (p >= 1) s.op = 0; });
+    cue(t0 + 0.12, 0.55, (p) => { const q = E.ui(p); const s = S(qk['q' + i]); s.op = q; s.ty = 22 * (1 - q); });
   }
-  function sumIn(i, t0) { cue(t0, 0.6, (p) => { const q = E.ui(p); const s = S(qk['s' + i]); s.op = q; s.ty = 10 * (1 - q); }); }
+  function sumIn(i, t0) { cue(t0, 0.5, (p) => { const q = E.ui(p); const s = S(qk['s' + i]); s.op = q; s.ty = 10 * (1 - q); }); }
 
-  T = T_READY + 0.35;
-  rise(intro.el, qs.el, T, 0.6);
-  base(qk.q0, { op: 0 }); cue(T + 0.1, 0.7, (p) => { const q = E.ui(p); const s = S(qk.q0); s.op = q; s.ty = 20 * (1 - q); });
-  const T_Q1 = T + 1.35;
+  T = T_READY + 0.25;
+  rise(intro.el, qs.el, T, 0.5);
+  cue(T + 0.1, 0.55, (p) => { const q = E.ui(p); const s = S(qk.q0); s.op = q; s.ty = 18 * (1 - q); });
+  const T_Q1 = T + 0.7;
   tap(main, 294, 701, T_Q1, qk.b0_0);
 
-  // vision-number form, typed in
+  // the vision number, typed in
   const vn = mount(main, scrVisionNumber());
   const vk = vn.k;
-  T = T_Q1 + 0.3;
-  rise(qs.el, vn.el, T, 0.6);
-  stagger([vk.t1, vk.f1, vk.t2, vk.f2, vk.go], T + 0.15, 0.06, 0.6, 14);
-  typeInto(vk.f1, '-0.5 and -0.75', T + 1.0, 0.06);
-  typeInto(vk.f2, '2 years', T + 2.25, 0.07);
-  const T_VN = T + 3.25;
+  T = T_Q1 + 0.25;
+  rise(qs.el, vn.el, T, 0.5);
+  stagger([vk.t1, vk.f1, vk.t2, vk.f2, vk.go], T + 0.1, 0.04, 0.5, 12);
+  typeInto(vk.f1, '-0.5 and -0.75', T + 0.5, 0.032);
+  typeInto(vk.f2, '2 years', T + 1.1, 0.04);
+  const T_VN = T + 1.5;
   tap(main, 280, 761, T_VN, vk.go);
 
-  // back to the questionnaire with the first two answers on top
-  T = T_VN + 0.3;
-  cue(T, 0.4, (p) => { const s = S(vn.el); s.op = 1 - E.out(p); s.ty = -18 * E.out(p); if (p >= 1) s.op = 0; });
-  cue(T + 0.1, 0, () => {});
-  cue(T + 0.1, 0.6, (p) => { const q = E.ui(p); const s = S(qs.el); s.op = q; s.ty = 0; s.z = ++zc; });
-  cue(T + 0.1, 0, () => { S(qk.q0).op = 0; });
-  sumIn(0, T + 0.2); sumIn(1, T + 0.32);
-  cue(T + 0.3, 0.65, (p) => { const q = E.ui(p); const s = S(qk.q1); s.op = q; s.ty = 26 * (1 - q); });
-  const STEP = 1.55;
-  let tq = T + 1.35;
-  tap(main, 294, 761, tq, qk.b1_2);                    // No, I haven't
-  sumIn(2, tq + 0.3); qSwap(2, tq + 0.3);
-  tq += STEP;
-  tap(main, 294, 761, tq, qk.b2_2);                    // No, I don't
-  sumIn(3, tq + 0.3); qSwap(3, tq + 0.3);
-  tq += STEP;
-  tap(main, 273, 761, tq, qk.b3_1);                    // Only when necessary
-  sumIn(4, tq + 0.3); qSwap(4, tq + 0.3);
-  tq += STEP;
-  tap(main, 294, 701, tq, qk.b4_0);                    // Yes, I do
-
-  // medical history form
-  const md = mount(main, scrMedical());
-  const mk = md.k;
-  T = tq + 0.3;
-  rise(qs.el, md.el, T, 0.65);
-  stagger([mk.t1, mk.f1, mk.t2, mk.f2, mk.t3, mk.f3, mk.go], T + 0.15, 0.06, 0.6, 14);
-  const T_MED = T + 1.9;
-  tap(main, 280, 761, T_MED, mk.go);
+  // back to the questions, the first answers collect at the top
+  T = T_VN + 0.25;
+  cue(T, 0.35, (p) => { const s = S(vn.el); s.op = 1 - E.out(p); s.ty = -16 * E.out(p); if (p >= 1) s.op = 0; });
+  cue(T + 0.08, 0.5, (p) => { const q = E.ui(p); const s = S(qs.el); s.op = q; s.ty = 0; s.z = ++zc; });
+  cue(T + 0.08, 0, () => { S(qk.q0).op = 0; });
+  sumIn(0, T + 0.15); sumIn(1, T + 0.25);
+  cue(T + 0.2, 0.55, (p) => { const q = E.ui(p); const s = S(qk.q1); s.op = q; s.ty = 22 * (1 - q); });
+  const STEP = 0.66;
+  let tq = T + 0.85;
+  tap(main, 294, 761, tq, qk.b1_2); sumIn(2, tq + 0.22); qSwap(2, tq + 0.22); tq += STEP;   // No, I haven't
+  tap(main, 294, 761, tq, qk.b2_2); sumIn(3, tq + 0.22); qSwap(3, tq + 0.22); tq += STEP;   // No, I don't
+  tap(main, 273, 761, tq, qk.b3_1); sumIn(4, tq + 0.22); qSwap(4, tq + 0.22); tq += STEP;   // Only when necessary
+  tap(main, 294, 761, tq, qk.b4_1);                                                         // No, I don't
 
   // ---------- 3. summary ----------
-  T = T_MED + 0.35;
+  T = tq + 0.25;
   const sum = mount(main, scrSummary());
   const sk = sum.k;
-  rise(md.el, sum.el, T, 0.7, 30);
-  capHide(caps[2], T);
-  capShow(caps[3], T + 0.5);
-  cue(T + 0.3, 0.7, (p) => { const q = E.ui(p); const s = S(tb.el); s.op = q; s.ty = 30 * (1 - q); });
-  tabTo(tb, 0, T + 0.3, 0.01);
-  stagger([sk.date, sk.title, sk.prof, sk.act, sk.see, sk.card, sk.bars, sk.rec, sk.c0, sk.c1, sk.c2, sk.c3], T + 0.25, 0.045, 0.7, 18);
+  rise(qs.el, sum.el, T, 0.6, 28);
+  cue(T + 0.2, 0.6, (p) => { const q = E.ui(p); const s = S(tb.el); s.op = q; s.ty = 30 * (1 - q); });
+  tabTo(tb, 0, T + 0.2, 0.01);
+  stagger([sk.date, sk.title, sk.prof, sk.act, sk.see, sk.card, sk.bars, sk.rec, sk.c0, sk.c1, sk.c2, sk.c3], T + 0.15, 0.035, 0.6, 16);
   [['b0', 0.4], ['b1', 0.24], ['b2', 0.7]].forEach(([k, v], i) => {
     base(sk[k], { w: 0 });
-    cue(T + 0.9 + i * 0.12, 1.1, (p) => { const q = E.ui(p); S(sk[k]).w = 289 * v * q; S(sk[k + 'l']).op = q; S(sk[k + 'l']).tx = -289 * v * (1 - q); });
+    cue(T + 0.55 + i * 0.1, 0.9, (p) => { const q = E.ui(p); S(sk[k]).w = 289 * v * q; S(sk[k + 'l']).op = q; S(sk[k + 'l']).tx = -289 * v * (1 - q); });
   });
-  const T_TAB_A = T + 2.9;
+  const T_TAB_A = T + 1.3;
   tap(main, 196, 812, T_TAB_A, null);
 
-  // ---------- 4. analysis ----------
-  T = T_TAB_A + 0.15;
+  // ---------- 4. analysis and the screen-distance alert ----------
+  T = T_TAB_A + 0.12;
   const an = mount(main, scrAnalysis());
   const ak = an.k;
-  xfade(sum.el, an.el, T, 0.35, 10);
+  xfade(sum.el, an.el, T, 0.3, 10);
   tabTo(tb, 1, T);
-  capHide(caps[3], T);
-  capShow(caps[4], T + 0.5);
   [['a0', 0.75], ['a1', 0.45], ['a2', 1]].forEach(([k, v], i) => {
     base(ak[k], { h: 0 });
-    cue(T + 0.35 + i * 0.1, 0.9, (p) => (S(ak[k]).h = 150 * v * E.ui(p)));
+    cue(T + 0.25 + i * 0.08, 0.8, (p) => (S(ak[k]).h = 150 * v * E.ui(p)));
   });
-  // the screen-distance alert
-  const T_AL = T + 2.0;
-  cue(T_AL, 0.45, (p) => { const q = E.ui(p); S(al.el).op = q; S(al.k.veil).op = q; });
-  cue(T_AL + 0.15, 0.55, (p) => { const q = E.ui(p); const s = S(al.k.close); s.op = q; s.ty = 16 * (1 - q); });
-  cue(T_AL, 2.2, (p, e) => {                         // chevrons ripple upward
+  const T_AL = T + 0.85;
+  cue(T_AL, 0.4, (p) => { const q = E.ui(p); S(al.el).op = q; S(al.k.veil).op = q; });
+  cue(T_AL + 0.1, 0.5, (p) => { const q = E.ui(p); const s = S(al.k.close); s.op = q; s.ty = 14 * (1 - q); });
+  cue(T_AL, 1.4, (p, e) => {
     [al.k.c0, al.k.c1, al.k.c2].forEach((c, i) => {
-      const w = 0.5 + 0.5 * Math.sin((e * 2 * Math.PI) / 1.1 - i * 0.9);
+      const w = 0.5 + 0.5 * Math.sin((e * 2 * Math.PI) / 0.9 - i * 0.9);
       c.setAttribute('opacity', (0.35 + 0.65 * w).toFixed(2));
     });
   });
-  const T_OK = T_AL + 2.1;
-  cue(T_OK, 0.4, (p) => { const q = E.out(p); const s = S(al.k.close); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 10 * q; });
-  cue(T_OK + 0.2, 0.55, (p) => { const q = E.ui(p); const s = S(al.k.ok); s.op = q; s.ty = 10 * (1 - q); });
-  cue(T_OK + 0.25, 0.9, (p) => {
+  const T_OK = T_AL + 0.9;
+  cue(T_OK, 0.35, (p) => { const q = E.out(p); const s = S(al.k.close); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 10 * q; });
+  cue(T_OK + 0.15, 0.5, (p) => { const q = E.ui(p); const s = S(al.k.ok); s.op = q; s.ty = 10 * (1 - q); });
+  cue(T_OK + 0.2, 0.75, (p) => {
     al.k.ring.setAttribute('stroke-dashoffset', (88 * (1 - E.ui(clamp(p / 0.7)))).toFixed(2));
     al.k.tick.setAttribute('stroke-dashoffset', (20 * (1 - E.ui(clamp((p - 0.45) / 0.55)))).toFixed(2));
   });
-  const T_ALX = T_OK + 1.8;
-  cue(T_ALX, 0.5, (p) => { const q = E.out(p); const s = S(al.el); s.op = (s.op ?? 1) * (1 - q); if (p >= 1) s.op = 0; });
-  // scroll to the daylight chart
-  const T_SC = T_ALX + 0.5;
-  cue(T_SC, 1.3, (p) => (S(ak.scroll).ty = -534 * E.io(p)));
-  DAY.forEach(([, v], i) => {
-    base(ak['d' + i], { h: 0 });
-    cue(T_SC + 0.7 + i * 0.06, 0.9, (p) => (S(ak['d' + i]).h = v * (210 / 150) * E.ui(p)));
-  });
-  countUp(ak.avg, 90, T_SC + 0.7, 1.0);
-  const T_TAB_S = T_SC + 2.7;
-  tap(main, 317, 812, T_TAB_S, null);
+  const T_ALX = T_OK + 0.75;
+  cue(T_ALX, 0.4, (p) => { const q = E.out(p); const s = S(al.el); s.op = (s.op ?? 1) * (1 - q); if (p >= 1) s.op = 0; });
 
-  // sharing
-  T = T_TAB_S + 0.15;
-  const sh = mount(main, scrSharing());
-  const hk = sh.k;
-  xfade(an.el, sh.el, T, 0.35, 10);
-  tabTo(tb, 2, T);
-  [['s0', 62], ['s1', 160], ['s2', 116]].forEach(([k, v], i) => { base(hk[k], { h: 0 }); cue(T + 0.3 + i * 0.1, 0.9, (p) => (S(hk[k]).h = v * E.ui(p))); });
-  base(hk.f0, {}); base(hk.f1, {});
-  const T_TAB_H = T + 2.0;
-  tap(main, 71, 812, T_TAB_H, null);
-
-  // back to the summary; open Eye Exercises
-  T = T_TAB_H + 0.15;
-  const sum2 = mount(main, scrSummary());
-  xfade(sh.el, sum2.el, T, 0.35, 10);
-  tabTo(tb, 0, T);
-  const T_MORE = T + 1.0;
-  tap(main, 130, 609, T_MORE, sum2.k.c0m);
-
-  T = T_MORE + 0.25;
-  const ex = mount(main, scrActivity(ACT.ex));
-  push(sum2.el, ex.el, T, 0.65);
-  capHide(caps[4], T + 1.3);
-
-  // ---------- 5. the four activity pages side by side ----------
-  const T_SPREAD = T + 1.3;
-  const SP = { s: 0.8, xs: [372, 764, 1156, 1548], y: 600 };
-  const others = [ACT.te, ACT.ga, null].map((o, i) => {
+  // ---------- 5. four more screens side by side ----------
+  const T_SPREAD = T_ALX + 0.25;
+  const SP = { s: 0.8, xs: [372, 764, 1156, 1548], y: 540 };
+  const spreadPhone = (scr, tab) => {
     const ph = makePhone();
-    const t = tabbar(ph); base(t.el, { op: 1 }); base(t.k.on0, { op: 1 });
-    const scr = mount(ph, o ? scrActivity(o) : scrEducation());
-    base(scr.el, { op: 1 });
-    return { ph, scr, i: i + 1 };
-  });
-  const hd = heading('06', 'Exercises, tests, games and reading');
-  base(hd.k.n, { op: 0 }); base(hd.k.h, { op: 0 });
-  cue(T_SPREAD, 1.1, (p) => { const q = E.io(p); place(S(main.el), lerp(CX, SP.xs[0], q), lerp(CY, SP.y, q), lerp(1, SP.s, q)); });
-  others.forEach(({ ph, scr, i }) => {
-    const t0 = T_SPREAD + 0.12 + i * 0.09;
-    cue(t0, 1.05, (p) => { const q = E.ui(p); const s = S(ph.el); place(s, SP.xs[i] + 240 * (1 - q), SP.y + 30 * (1 - q), SP.s * (0.96 + 0.04 * q)); s.op = clamp(p * 2.2); });
-    const k = scr.k;
-    const items = [k.title, k.see, k.main, k.sc, k.sk, k.r0, k.r1, k.r2, k.r3, k.e0, k.e1, k.e2, k.e3, k.e4, k.e5].filter(Boolean);
-    stagger(items, t0 + 0.3, 0.045, 0.65, 16);
-  });
-  [hd.k.n, hd.k.h].forEach((e, i) => cue(T_SPREAD + 0.5 + i * 0.08, 0.8, (p) => { const q = E.ui(p); const s = S(e); s.op = q; s.ty = 18 * (1 - q); }));
-  // the score numbers count up on the three activity pages
-  [ex, others[0].scr, others[1].scr].forEach((scr, j) => {
-    const o = [ACT.ex, ACT.te, ACT.ga][j];
-    countUp(scr.k.score, o.score, T_SPREAD + 0.6 + j * 0.1, 1.2);
-  });
-
-  // focus on Eye Games
-  const T_FOCUS = T_SPREAD + 3.6;
-  const games = others[1];
-  [hd.k.n, hd.k.h].forEach((e) => cue(T_FOCUS, 0.4, (p) => { const s = S(e); s.op = (s.op ?? 1) * (1 - E.in(p)); }));
-  [{ ph: main, i: 0 }, others[0], others[2]].forEach(({ ph, i }, j) => {
-    cue(T_FOCUS + j * 0.05, 0.75, (p) => { const q = E.in(p); const s = S(ph.el); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) + 40 * q; s.sc = (s.sc ?? 1) * (1 - 0.04 * q); });
-  });
-  cue(T_FOCUS + 0.25, 1.2, (p) => { const q = E.io(p); place(S(games.ph.el), lerp(SP.xs[2], CX, q), lerp(SP.y, CY, q), lerp(SP.s, 1, q)); S(games.ph.el).op = 1; });
-  capShow(caps[5], T_FOCUS + 0.9);
-
-  // ---------- 6. color match ----------
-  const G = games.ph;
-  const gtb = { el: G.screen.querySelector('.tabbar') };
-  const T_CM = T_FOCUS + 2.0;
-  tap(G, 80, 230, T_CM, games.scr.k.main);
-  T = T_CM + 0.25;
-  const ci = mount(G, scrColorIntro());
-  const cik = ci.k;
-  push(games.scr.el, ci.el, T, 0.65);
-  cue(T, 0.45, (p) => { const s = S(gtb.el); s.op = 1 - E.out(p); s.ty = 20 * E.out(p); });
-  base(cik.p2, { op: 0 }); base(cik.d0b, { op: 0 }); base(cik.d1b, { op: 0 });
-  cue(T + 0.5, 1.6, (p, e) => { const s = S(cik.ball); s.ty = -6 * Math.sin(e * 2.4); });
-  // swipe to the instructions page
-  const T_SW = T + 1.9;
-  cue(T_SW - 0.3, 0.9, (p, e) => {
-    const s = S(G.touch); const u = e - 0.3;
-    if (u < 0) { s.op = E.out(clamp((u + 0.3) / 0.25)); s.tx = 300; s.ty = 560; s.sc = 1; }
-    else { const q = E.io(clamp(u / 0.4)); s.tx = 300 - 200 * q; s.ty = 560; s.op = u > 0.4 ? 1 - E.out(clamp((u - 0.4) / 0.2)) : 1; s.sc = 0.88; }
-    if (p >= 1) s.op = 0;
-  });
-  cue(T_SW, 0.55, (p) => {
-    const q = E.push(p);
-    const a = S(cik.p1); a.tx = -390 * q; a.op = 1;
-    const b = S(cik.p2); b.tx = 390 * (1 - q); b.op = 1;
-    S(cik.d0b).op = q; S(cik.d1b).op = q;
-  });
-  cue(T_SW + 0.4, 2.2, (p, e) => { S(cik.wheel).rot = e * 40; S(cik.halo).rot = e * 40; });
-  base(cik.wheel, {}); base(cik.halo, {});
-  cue(T_SW + 0.1, 2.5, (p, e) => { const s = S(cik.halo); s.op = 0.75 + 0.25 * Math.sin(e * 3); });
-  const T_START = T_SW + 1.6;
-  tap(G, 282, 766, T_START, cik.go);
-
-  // the game
-  T = T_START + 0.3;
-  const gm = mount(G, scrGame());
-  const gk = gm.k;
-  xfade(ci.el, gm.el, T, 0.45, 0);
-  base(gk.cnt, { txt: 'will start in 3' });
-  base(gk.disc, { op: 0 }); base(gk.knob, { op: 0 }); base(gk.confirm, { op: 0 });
-  cue(T + 0.1, 0.8, (p) => { const q = E.ui(p); const s = S(gk.wheel); s.sc = 0.86 + 0.14 * q; s.rot = -40 * (1 - q); });
-  ['3', '2', '1'].forEach((n, i) => cue(T + 0.4 + i * 0.55, 0, () => (S(gk.cnt).txt = 'will start in ' + n)));
-  const T_PLAY = T + 2.05;
-  cue(T_PLAY, 0.35, (p) => { const q = E.out(p); S(gk.hue).op = 1 - q; S(gk.cnt).op = 1 - q; S(gk.hue).sc = 1 - 0.1 * q; });
-  const knobAt = (s, deg) => { const r = 118.5, a = (deg - 90) * Math.PI / 180; s.tx = 195 + r * Math.cos(a); s.ty = 436 + r * Math.sin(a); };
-  // two rounds: orange, then magenta
-  const rounds = [{ t: T_PLAY + 0.2, from: 10, to: 87, col: 'hsl(33 92% 52%)' }, { t: T_PLAY + 2.6, from: 87, to: 182, col: 'hsl(300 95% 50%)' }];
-  rounds.forEach((r, i) => {
-    cue(r.t, 0.5, (p) => { const q = E.ui(p); const s = S(gk.disc); s.op = q; s.sc = 0.6 + 0.4 * q; s.bg = r.col; });
-    cue(r.t, 0.35, (p) => { const s = S(gk.knob); s.op = E.out(p); knobAt(s, r.from); });
-    cue(r.t + 0.45, 1.05, (p) => { const s = S(gk.knob); s.op = 1; knobAt(s, lerp(r.from, r.to, E.io(p))); });
-    // timer slice sweeping round the disc
-    cue(r.t + 0.3, 1.9, (p) => { S(gk.pie).bg = `conic-gradient(rgba(220,30,40,.55) 0deg ${(360 * p * 0.55).toFixed(1)}deg, transparent ${(360 * p * 0.55).toFixed(1)}deg)`; });
-    cue(r.t + 1.55, 0.35, (p) => { const s = S(gk.confirm); s.op = E.ui(p); });
-    const at = r.t + 2.05;
-    tap(G, 195, 436, at, gk.disc);
-    cue(at + 0.12, 0.3, (p) => { const s = S(gk.confirm); s.op = (s.op ?? 1) * (1 - E.out(p)); });
-    cue(at + 0.15, 0.4, (p) => { S(gk.pie).bg = 'transparent'; const s = S(gk.disc); s.sc = (s.sc ?? 1) * (1 + 0.12 * Math.sin(Math.PI * p)); });
-  });
-  const T_RES = T_PLAY + 5.0;
-  cue(T_RES - 0.4, 0.4, (p) => { const s = S(gk.disc); s.op = (s.op ?? 1) * (1 - E.out(p)); S(gk.knob).op = (S(gk.knob).op ?? 1) * (1 - E.out(p)); });
-
-  // results
-  T = T_RES;
-  const rs = mount(G, scrResult());
-  const rk = rs.k;
-  rise(gm.el, rs.el, T, 0.65, 30);
-  stagger([rk.c1, rk.c2, rk.tell, rk.next], T + 0.2, 0.08, 0.7, 20);
-  [['x0', 172], ['x1', 98], ['x2', 144]].forEach(([k, w], i) => { base(rk[k], { w: 0 }); cue(T + 0.6 + i * 0.1, 1.0, (p) => { S(rk[k]).w = w * E.ui(p); S(rk[k + 'l']).op = E.ui(p); }); });
-  countUp(rk.score, 124, T + 0.5, 1.0);
-  [45, 127, 208, 289].forEach((x, i) => { const e = rk['fr' + x]; base(e, {}); cue(T + 0.9 + i * 0.07, 0.6, (p) => { const q = E.ui(p); const s = S(e); s.sc = 0.7 + 0.3 * q; s.op = q; }); });
-  const T_TELL = T + 2.5;
-  tap(G, 282, 698, T_TELL, rk.tell);
-
-  // ---------- 7. your experience ----------
-  T = T_TELL + 0.3;
-  const xp = scrQuestions([
-    { n: '1 of 4', q: 'Were you able to match the shades properly?', w: 260, buttons: [['Yes, most of them', '', 220, 680, 143], ['No, rarely', '', 220, 740, 143]] },
-    { n: '2 of 4', q: 'Did you experience any eye strain while focusing on the colors?', w: 300, buttons: [['Yes', '', BR[0], 680, BR[1]], ['No', '', BR[0], 740, BR[1]]] },
-    { n: '3 of 4', q: 'Did you find it difficult to distinguish between any two colors?', w: 300, buttons: [['Yes', '', BR[0], 680, BR[1]], ['No', '', BR[0], 740, BR[1]]] },
-    { n: '4 of 4', q: 'Any other experiences you would like to share from the game?', w: 300, field: 'Difficult to match shades', buttons: [['Skip the question', '', 195, 740, 160]] },
-    { n: '5 of 5', q: 'Would you like to schedule a virtual consultation with our doctor?', w: 310, buttons: [['Yes', '', BR[0], 680, BR[1]], ['No', '', BR[0], 740, BR[1]]] },
-  ], ['Could match the<br>shades', 'No strain was<br>experienced', 'No difficulty in<br>distinguishing the<br>colors'], { header: 'Eye Games', title: 'Your Experience', top: 165, sx: 30 });
-  mount(G, xp);
-  const xk = xp.k;
-  for (let i = 0; i < 3; i++) base(xk['s' + i], { op: 0 });
-  for (let i = 0; i < 5; i++) base(xk['q' + i], { op: 0 });
-  // move the field of question 4 up above its button
-  rise(rs.el, xp.el, T, 0.6);
-  capHide(caps[5], T);
-  capShow(caps[6], T + 0.5);
-  cue(T + 0.1, 0.7, (p) => { const q = E.ui(p); const s = S(xk.q0); s.op = q; s.ty = 20 * (1 - q); });
-  const xSwap = (i, t0) => {
-    cue(t0, 0.35, (p) => { const q = E.out(p); const s = S(xk['q' + (i - 1)]); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) - 22 * q; if (p >= 1) s.op = 0; });
-    cue(t0 + 0.18, 0.65, (p) => { const q = E.ui(p); const s = S(xk['q' + i]); s.op = q; s.ty = 26 * (1 - q); });
+    const t = tabbar(ph);
+    if (tab >= 0) { base(t.el, { op: 1 }); base(t.k['on' + tab], { op: 1 }); }
+    const s = mount(ph, scr);
+    base(s.el, { op: 1 });
+    return { ph, scr: s };
   };
-  const xSum = (i, t0) => cue(t0, 0.6, (p) => { const q = E.ui(p); const s = S(xk['s' + i]); s.op = q; s.ty = 10 * (1 - q); });
-  const XS = 1.45;
-  let tx = T + 1.3;
-  tap(G, 291, 701, tx, xk.b0_0); xSum(0, tx + 0.3); xSwap(1, tx + 0.3); tx += XS;
-  tap(G, 294, 761, tx, xk.b1_1); xSum(1, tx + 0.3); xSwap(2, tx + 0.3); tx += XS;
-  tap(G, 294, 761, tx, xk.b2_1); xSum(2, tx + 0.3); xSwap(3, tx + 0.3); tx += XS;
-  tap(G, 280, 761, tx, xk.b3_0); xSwap(4, tx + 0.3); tx += XS;
-  tap(G, 294, 701, tx, xk.b4_0);
-
-  // ---------- 8. virtual consultation ----------
-  T = tx + 0.3;
-  const vc = mount(G, scrConsult());
-  const vck = vc.k;
-  push(xp.el, vc.el, T, 0.65);
-  cue(T + 0.2, 0.6, (p) => { const q = E.ui(p); const s = S(gtb.el); s.op = q; s.ty = 20 * (1 - q); });
-  const gtbOn = G.screen.querySelector('.tabbar').querySelectorAll('.on');
-  cue(T + 0.2, 0, () => { S(gtbOn[0]).op = 0; S(gtbOn[2]).op = 1; });
-  base(gtbOn[2], { op: 0 });
-  capHide(caps[6], T);
-  capShow(caps[7], T + 0.5);
-  stagger([vck.d0, vck.d1, vck.d2, vck.d3], T + 0.45, 0.09, 0.7, 24);
-
-  // ---------- 9. finale: three highlights, then the logo ----------
-  const T_FIN = T + 3.0;
-  capHide(caps[7], T_FIN);
-  const FS = { s: 0.84, xs: [560, 960, 1360], y: 548 };
-  const finSharing = (() => { const ph = makePhone(); const t = tabbar(ph); base(t.el, { op: 1 }); base(t.k.on2, { op: 1 }); const s = mount(ph, scrSharing()); base(s.el, { op: 1 }); return ph; })();
-  const finAnalysis = (() => { const ph = makePhone(); const t = tabbar(ph); base(t.el, { op: 1 }); base(t.k.on1, { op: 1 }); const s = mount(ph, scrAnalysis()); base(s.el, { op: 1 }); base(s.k.scroll, { ty: -534 }); return ph; })();
-  cue(T_FIN, 1.2, (p) => { const q = E.io(p); place(S(G.el), lerp(CX, FS.xs[2], q), lerp(CY, FS.y, q), lerp(1, FS.s, q)); S(G.el).op = 1; });
-  [finAnalysis, finSharing].forEach((ph, i) => {
-    const t0 = T_FIN + 0.2 + i * 0.12;
-    cue(t0, 1.1, (p) => { const q = E.ui(p); const s = S(ph.el); place(s, FS.xs[i] - 200 * (1 - q), FS.y + 30 * (1 - q), FS.s); s.op = clamp(p * 2.2); });
+  const others = [
+    spreadPhone(scrActivity(ACT.ga), 0),
+    spreadPhone(scrResult(), -1),
+    spreadPhone(scrConsult(), 2),
+  ];
+  // the analysis phone slides to the first slot; the others arrive from the right
+  cue(T_SPREAD, 1.0, (p) => { const q = E.io(p); place(S(main.el), lerp(CX, SP.xs[0], q), CY, lerp(1, SP.s, q)); });
+  others.forEach(({ ph, scr }, j) => {
+    const i = j + 1, t0 = T_SPREAD + 0.1 + j * 0.08;
+    cue(t0, 0.95, (p) => { const q = E.ui(p); const s = S(ph.el); place(s, SP.xs[i] + 260 * (1 - q), SP.y + 24 * (1 - q), SP.s * (0.96 + 0.04 * q)); s.op = clamp(p * 2.2); });
+    const k = scr.k;
+    const items = [k.title, k.see, k.main, k.sc, k.sk, k.r0, k.r1, k.r2, k.r3, k.c1, k.c2, k.tell, k.next, k.d0, k.d1, k.d2, k.d3].filter(Boolean);
+    stagger(items, t0 + 0.25, 0.04, 0.6, 14);
   });
-  const T_END = T_FIN + 3.4;
-  [finAnalysis, finSharing, G].forEach((ph, i) => {
-    cue(T_END + i * 0.08, 0.8, (p) => { const q = E.in(p); const s = S(ph.el); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) + 50 * q; });
-  });
-  const end = el(`<div class="m" style="left:0;top:0;width:1920px;height:1080px">
-    <div class="a appicon" data-k="icon" style="left:902px;top:338px;width:116px;height:116px;border-radius:27px;box-shadow:0 0 0 1.5px #e1e4ea, 0 20px 40px -12px rgba(30,60,120,.25)"><div class="a dot" style="left:14px;top:14px;width:88px;height:88px"></div></div>
-    <div class="a" data-k="name" style="left:0;top:488px;width:1920px;text-align:center;font-size:64px;font-weight:600;letter-spacing:-.03em;color:#12151b">Vision Health</div>
-    <div class="a" data-k="tag" style="left:0;top:578px;width:1920px;text-align:center;font-size:24px;color:#5c6574">An eye-health companion for Apple Health</div>
-  </div>`);
-  stage.appendChild(end);
-  const ek = refs(end);
-  base(ek.icon, { op: 0 });
-  cue(T_END + 0.6, 0.9, (p) => { const q = E.ui(p); const s = S(ek.icon); s.op = q; s.sc = 0.7 + 0.3 * q; });
-  stagger([ek.name, ek.tag], T_END + 0.85, 0.12, 0.8, 20);
+  countUp(others[0].scr.k.score, ACT.ga.score, T_SPREAD + 0.5, 1.0);
+  const rk = others[1].scr.k;
+  [['x0', 172], ['x1', 98], ['x2', 144]].forEach(([k, w], i) => { base(rk[k], { w: 0 }); cue(T_SPREAD + 0.6 + i * 0.08, 0.9, (p) => { S(rk[k]).w = w * E.ui(p); S(rk[k + 'l']).op = E.ui(p); }); });
+  countUp(rk.score, 124, T_SPREAD + 0.5, 1.0);
 
-  const DURATION = Math.ceil((T_END + 3.4) * 10) / 10;
+  // ---------- 6. out ----------
+  const T_END = T_SPREAD + 2.5;
+  [main, ...others.map((o) => o.ph)].forEach((ph, i) => {
+    cue(T_END + i * 0.07, 0.7, (p) => { const q = E.in(p); const s = S(ph.el); s.op = (s.op ?? 1) * (1 - q); s.ty = (s.ty ?? 0) + 40 * q; });
+  });
+
+  const DURATION = Math.ceil((T_END + 0.9) * 10) / 10;
 
   // =====================================================================
   //                         playback & export
