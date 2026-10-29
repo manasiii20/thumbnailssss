@@ -795,12 +795,7 @@
   const con = mount(main, scrConnect());
   const ck = con.k;
   rise(wel.el, con.el, T, 0.55);
-  cue(T, 3.2, (p, e) => {
-    ['o1', 'o2', 'o3', 'o4'].forEach((n, i) => ck[n].setAttribute('stroke-dashoffset', String((-(e + 10) * (16 + i * 4)).toFixed(1))));
-    ck.ph.setAttribute('transform', `translate(0 ${(Math.sin((e + 10) * 2.2) * 4).toFixed(2)})`);
-    ck.wa.setAttribute('transform', `translate(0 ${(Math.sin((e + 10) * 2.2 + 1.7) * 4).toFixed(2)})`);
-    S(ck.spin).rot = ((e * 400) | 0) - (((e * 400) | 0) % 45);
-  });
+  cue(T, 3.2, (p, e) => { S(ck.spin).rot = ((e * 400) | 0) - (((e * 400) | 0) % 45); });
   stagger([ck.title, ck.body], T + 0.2, 0.07, 0.6, 16);
   base(ck.illu, { op: 0 }); cue(T + 0.35, 0.65, (p) => { const q = E.ui(p); const s = S(ck.illu); s.op = q; s.sc = 0.94 + 0.06 * q; });
   fadeUp(ck.searching, T + 0.45, 0.5, 10);
@@ -878,6 +873,7 @@
 
   // ---------- 3. summary ----------
   T = tq + 0.25;
+  const T_SUM = T;
   const sum = mount(main, scrSummary());
   const sk = sum.k;
   rise(qs.el, sum.el, T, 0.6, 28);
@@ -940,31 +936,32 @@
   DAY.forEach(([, v], i) => { base(day.k['d' + i], { h: 0 }); cue(T_P1 + 0.8 + i * 0.07, 0.9, (p) => (S(day.k['d' + i]).h = v * (210 / 150) * E.ui(p))); });
   countUp(day.k.avg, 90, T_P1 + 0.8, 1.0);
 
-  // pair 2: both slide out left, sharing and games slide in from the right
-  const T_P2 = T_P1 + 3.2;
-  slideOut(main, PAIR.xs[0], T_P2);
-  slideOut(day.ph, PAIR.xs[1], T_P2 + 0.06);
+  // pair 2: all four phones sit on one strip that pans left as a whole
+  const T_P2 = T_P1 + 3.2, D = 1500;
   const shr = extra(scrSharing(), 2);
   const gam = extra(scrActivity(ACT.ga), 0);
-  slideIn(shr.ph, PAIR.xs[0], T_P2 + 0.15);
-  slideIn(gam.ph, PAIR.xs[1], T_P2 + 0.23);
-  [['s0', 62], ['s1', 160], ['s2', 116]].forEach(([k, v], i) => { base(shr.k[k], { h: 0 }); cue(T_P2 + 1.0 + i * 0.1, 0.9, (p) => (S(shr.k[k]).h = v * E.ui(p))); });
-  stagger([gam.k.main, gam.k.sc, gam.k.sk, gam.k.r0, gam.k.r1, gam.k.r2, gam.k.r3], T_P2 + 0.9, 0.06, 0.6, 14);
-  countUp(gam.k.score, ACT.ga.score, T_P2 + 1.0, 1.0);
+  [[main, PAIR.xs[0]], [day.ph, PAIR.xs[1]], [shr.ph, PAIR.xs[0] + D], [gam.ph, PAIR.xs[1] + D]].forEach(([ph, x]) => {
+    cue(T_P2, 1.3, (p) => { const q = E.io(p); const s = S(ph.el); place(s, x - D * q, CY, PAIR.s); s.op = 1; });
+  });
+  [['s0', 62], ['s1', 160], ['s2', 116]].forEach(([k, v], i) => { base(shr.k[k], { h: 0 }); cue(T_P2 + 0.9 + i * 0.1, 0.9, (p) => (S(shr.k[k]).h = v * E.ui(p))); });
+  stagger([gam.k.main, gam.k.sc, gam.k.sk, gam.k.r0, gam.k.r1, gam.k.r2, gam.k.r3], T_P2 + 0.8, 0.06, 0.6, 14);
+  countUp(gam.k.score, ACT.ga.score, T_P2 + 0.9, 1.0);
 
   // ---------- 6. everything swipes up and away; the start swipes the phone up from below ----------
   const T_END = T_P2 + 3.4;
   [shr.ph, gam.ph].forEach((ph, i) => cue(T_END + i * 0.06, 0.85, (p) => { const q = E.in(p); const s = S(ph.el); s.ty = (s.ty ?? 0) - 1150 * q; }));
 
-  const SLOW = 1.25;   // the whole timeline plays this much slower
-  const DURATION = Math.ceil((T_END + 0.95) * SLOW * 10) / 10;
+  // Summary, Analysis and the screen-distance alert play SLOW times slower; everything else at scripted speed.
+  const SLOW = 1.6, W0 = T_SUM, W1 = T_P1;
+  const warp = (t) => (t < W0 ? t : t < W0 + (W1 - W0) * SLOW ? W0 + (t - W0) / SLOW : t - (W1 - W0) * (SLOW - 1));
+  const DURATION = Math.ceil((T_END + 0.95 + (W1 - W0) * (SLOW - 1)) * 10) / 10;
 
   // =====================================================================
   //                         playback & export
   // =====================================================================
   function renderAt(t) {
     FRAME++;
-    t /= SLOW;
+    t = warp(t);
     for (const c of cues) {
       if (t < c.t0) continue;
       const el = t - c.t0;

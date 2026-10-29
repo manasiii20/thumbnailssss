@@ -1,6 +1,6 @@
 # Vision Health walkthrough reel
 
-`exports/vision-health-walkthrough.mp4`: 1920 × 1080, 60 fps, 30.5 s. It shows screens only. The phone swipes up from the bottom at the start, and everything swipes up and away at the end, so the reel loops smoothly. The whole timeline plays at `SLOW` = 1.25× its scripted speed.
+`exports/vision-health-walkthrough.mp4`: 1920 × 1080, 60 fps, 27 s. It shows screens only. The phone swipes up from the bottom at the start, and everything swipes up and away at the end, so the reel loops smoothly. Summary, Analysis and the screen-distance alert play `SLOW` = 1.6× slower; the rest runs at scripted speed. The Analysis pair pans to Sharing + Eye Games as one continuous strip. The connect-devices illustration is static.
 
 Every screen is rebuilt as real UI, so it stays sharp at full HD. Only the drawn artwork is cut from the captures in `source/`.
 
