@@ -4,3 +4,5 @@ __pycache__/
 systemmap/trace/lost-*.png
 vision/exports/stills/
 vision/exports/part-*.mp4
+saved/exports/stills/
+saved/exports/part-*.mp4
