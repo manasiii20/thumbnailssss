@@ -1,18 +1,18 @@
 # Vision Health walkthrough reel
 
-`exports/vision-health-walkthrough.mp4`: 1920 × 1080, 60 fps, 27 s. It shows screens only. The phone swipes up from the bottom at the start, and everything swipes up and away at the end, so the reel loops smoothly. Summary, Analysis and the screen-distance alert play `SLOW` = 1.6× slower; the rest runs at scripted speed. The Analysis pair pans to Sharing + Eye Games as one continuous strip. The connect-devices illustration is static.
+`exports/vision-health-walkthrough.mp4`: 1920 × 1080, 60 fps, 25 s. It shows screens only. The phone swipes up from the bottom at the start, and everything swipes up and away at the end, so the reel loops smoothly. Summary, Analysis and the screen-distance alert play `SLOW` = 1.6× slower; the rest runs at scripted speed. The Analysis pair pans to Sharing + Eye Games as one continuous strip. The connect-devices illustration is static.
 
 Every screen is rebuilt as real UI, so it stays sharp at full HD. Only the drawn artwork is cut from the captures in `source/`.
 
 | Time | What happens |
 | --- | --- |
-| 0 – 3 s | The phone swipes up on the splash dot, which becomes the app icon on **Welcome to Vision Health**. Tap **Get Started** |
+| 0 – 3 s | The phone swipes up on the splash dot (no rings), which becomes the app icon on **Welcome to Vision Health**. Tap **Get Started** |
 | 3 – 7 s | **Connect your devices**: searching, the smartwatch card, **CONNECT** → **✓ CONNECTED**, **Cool, let’s move forward** |
 | 7 – 15 s | "Aryan, we know nothing…", Question 1, the vision number typed in, Questions 2–5 with the answers collecting at the top |
 | 15 – 21 s | **Summary**, then **Analysis** with the screen-distance alert |
-| 21 – 25 s | Analysis steps left and the Time in Daylight chart slides in beside it |
-| 25 – 29 s | Both slide out; **Sharing** and **Eye Games** slide in |
-| 29 – 30.5 s | Everything swipes up and away |
+| 20 – 22.5 s | Analysis steps left and the Time in Daylight chart slides in beside it |
+| 22.5 – 24.4 s | The strip pans to **Sharing** and **Eye Games** |
+| 24.4 – 25 s | Everything swipes up and away |
 
 ```sh
 python3 vision/extract.py                    # after changing anything in source/ → assets/*.png + assets/embedded.js
