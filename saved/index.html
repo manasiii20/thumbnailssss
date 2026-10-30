@@ -197,18 +197,15 @@
 
   // ---------- timeline (seconds) ----------
   const T = {
-    phoneIn: 0, phoneInDur: 1.0,          // the phone swipes up from below (as the Vision Health reel does)
-    intro: 0.45,                           // the headline rises, line by line
-    dock: 0.45 + 1.4 + 2.0,                // the artifact holds the text alone for 2 s, then the dock rises
-    cursorIn: 5.0, cursorDur: 0.9,         // the pointer glides onto the folder; it lifts on hover
-    open: 6.35,                            // click: the saves fan out along the arc
-    browse: 8.5, browseDur: 1.9,           // scroll through the rest of them
-    back: 11.0, backDur: 1.2,              // scroll back down
-    leave: 12.4, leaveDur: 0.6,            // the pointer moves off to empty space
-    close: 13.15,                          // click: the cards go back into the folder
-    out: 14.6, outDur: 0.75,               // everything swipes up and away
+    intro: 0.15,                           // the headline rises, line by line (done at ~1.75 s)
+    dock: 1.8,                             // the dock follows right after
+    cursorIn: 2.8, cursorDur: 0.8,         // the pointer glides onto the folder; it lifts on hover
+    open: 3.85,                            // click: the saves fan out along the arc
+    close: 6.6,                            // click the folder again: they fly back in
+    leave: 7.7, leaveDur: 0.6,             // the pointer moves off
+    dockOut: 8.3, textOut: 8.45,           // the dock drops and the headline fades, back to the first frame
   };
-  const DURATION = 15.5, FPS = 60;
+  const DURATION = 9.4, FPS = 60;
 
   // ---------- the ten saves (from the artifact) ----------
   const ART = [
@@ -304,9 +301,7 @@
     const target = (t) => {
       if (t < T.open) return -gap;
       if (t >= T.close) return -gap;
-      if (t < T.browse) return rest;
-      if (t < T.back) return lerp(rest, maxOff, EASE(ph(t, T.browse, T.browseDur)));
-      return lerp(maxOff, rest, EASE(ph(t, T.back, T.backDur)));
+      return rest;
     };
     let off = -gap; OFF = [];
     for (let f = 0; f <= Math.ceil(DURATION * FPS); f++) {
@@ -321,21 +316,19 @@
   const paper = $('paper'), paperBack = $('paperBack'), front = $('front'), dot = $('dot');
   function renderAt(t) {
     // phone: swipe up from below, swipe up and away at the end
-    const pin = IO(ph(t, T.phoneIn, T.phoneInDur)), pout = IN(ph(t, T.out, T.outDur));
-    phone.style.transform = `translateY(${(1100 * (1 - pin) - 1150 * pout).toFixed(2)}px)`;
 
     // headline: each line rises out of a blur, 0.13 s apart
     rises.forEach((e, i) => {
-      const q = RISE(ph(t, T.intro + 0.2 + i * 0.13, 0.9));
+      const q = RISE(ph(t, T.intro + 0.2 + i * 0.13, 0.9)) * (1 - EASE(ph(t, T.textOut + i * 0.05, 0.45)));
       e.style.opacity = q.toFixed(3);
       e.style.transform = `translateY(${(0.9 * (1 - q)).toFixed(3)}cqw)`;
       e.style.filter = q >= 1 ? 'none' : `blur(${(4 * (1 - q)).toFixed(2)}px)`;
     });
 
     // dock: springs up from below
-    const dq = DOCK(ph(t, T.dock, 0.85));
+    const dq = DOCK(ph(t, T.dock, 0.85)) * (1 - IN(ph(t, T.dockOut, 0.45)));
     dock.style.transform = `translate(-50%, ${(170 * (1 - dq)).toFixed(2)}%)`;
-    dock.style.opacity = EASE(ph(t, T.dock, 0.4)).toFixed(3);
+    dock.style.opacity = (EASE(ph(t, T.dock, 0.4)) * (1 - EASE(ph(t, T.dockOut + 0.2, 0.25)))).toFixed(3);
 
     // pointer path: in from the lower right, onto the folder, up with the browse, back, then off to empty space
     const fx = FX, fy = FY + 4;
@@ -345,7 +338,7 @@
       cop = OUT(ph(t, T.cursorIn, 0.25));
       const q = IO(ph(t, T.cursorIn, T.cursorDur)); cx = lerp(start.x, fx, q); cy = lerp(start.y, fy, q);
       const lv = IO(ph(t, T.leave, T.leaveDur)); cx = lerp(cx, away.x, lv); cy = lerp(cy, away.y, lv);
-      if (t >= T.out - 0.2) cop *= 1 - ph(t, T.out - 0.2, 0.2);
+      cop *= 1 - ph(t, T.leave + 0.25, 0.35);
     }
     let press = 0;
     for (const c of [T.open, T.close]) press = Math.max(press, Math.sin(Math.PI * ph(t, c - 0.08, 0.2)));

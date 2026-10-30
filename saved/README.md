@@ -1,19 +1,17 @@
 # Saved for Later reel
 
-`exports/saved-for-later.mp4`: 1920 × 1080, 60 fps, 15.5 s, on a #FCEDBC background. It's built to sit next to the Vision Health reel: the iPhone 17 here has the same outer size and position as the Vision Health phone (414 × 868, centred), and it swipes up from below at the start and up and away at the end, the same way.
+`exports/saved-for-later.mp4`: 1920 × 1080, 60 fps, a 9.4 s seamless loop on a #FCEDBC background. The iPhone 17 stays still in the frame and has the same size and position as the Vision Health phone (414 × 868, centred).
 
-The screen is the Saved for Later artifact (claude.ai/artifact/N9RkMtzioecmgYkXGn7SfD) with the same markup, styles, curves and arc maths. It's sized to the phone screen, and its motion is replayed on a fixed timeline so every frame renders exactly:
+The screen is the Saved for Later artifact (claude.ai/artifact/N9RkMtzioecmgYkXGn7SfD) with the same markup, styles, curves and arc maths, replayed on a fixed timeline:
 
 | Time | What happens |
 | --- | --- |
-| 0 – 1 s | The phone swipes up from below |
-| 0.65 – 2.4 s | "09/26 · What I saved for later in September" rises line by line out of a blur |
-| 3.85 s | After the artifact's 2 s hold, the dock springs up |
-| 5 – 6.4 s | The pointer glides onto the folder, which lifts on hover, then clicks |
-| 6.4 – 8.5 s | The ten saves fan out of the folder along the arc |
-| 8.5 – 12.2 s | It scrolls up through the rest of them and back |
-| 12.4 – 13.2 s | The pointer moves off and clicks empty space; the cards go back into the folder |
-| 14.6 – 15.5 s | The phone swipes up and away |
+| 0.35 – 1.75 s | "09/26 · What I saved for later in September" rises line by line out of a blur |
+| 1.8 s | The dock springs up right after |
+| 2.8 – 3.85 s | The pointer glides onto the folder, which lifts, then clicks |
+| 3.85 – 6.6 s | The ten saves fan out of the folder along the arc and rest there |
+| 6.6 s | Click the folder again: the cards fly back in, the same way they came out |
+| 7.7 – 9.4 s | The pointer leaves, the dock drops and the headline fades, back to the first frame |
 
 The only change to the artifact: its stage is 9:16 and the phone screen is taller, so the arc is bent as if the screen were 9:16, which keeps the cards inside the screen.
 
